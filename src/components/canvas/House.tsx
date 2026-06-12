@@ -370,19 +370,19 @@ function Lights() {
   void flashlightOn; // flashlight itself lives on the camera (PlayerController)
   return (
     <>
-      <ambientLight intensity={0.32} color="#26304d" />
+      <ambientLight intensity={0.85} color="#3a4565" />
       {/* moonlight through windows */}
-      <directionalLight position={[18, 6, 11]} intensity={0.35} color="#7e92bd" />
-      <directionalLight position={[-6, 5, 11]} intensity={0.2} color="#7e92bd" />
+      <directionalLight position={[18, 6, 11]} intensity={0.7} color="#8ea2cd" />
+      <directionalLight position={[-6, 5, 11]} intensity={0.45} color="#8ea2cd" />
       {/* faint per-room practicals (storage stays dark) */}
-      <pointLight position={[12.5, 2.3, 11]} intensity={2.4} distance={7} color="#5a6890" />
-      <pointLight position={[2.5, 2.3, 6.5]} intensity={1.6} distance={6.5} color="#564f6a" />
-      <pointLight position={[4.5, 2.3, 11]} intensity={2.2} distance={8} color="#5d5a78" />
-      <pointLight position={[7.75, 2.3, 6.5]} intensity={1.7} distance={6} color="#4d4a62" />
-      <pointLight position={[12.75, 2.3, 4.5]} intensity={2.0} distance={7} color="#4f5a6e" />
-      <pointLight position={[7.75, 2.3, 2]} intensity={1.2} distance={5} color="#48505e" />
+      <pointLight position={[12.5, 2.3, 11]} intensity={5.2} distance={7} color="#5a6890" />
+      <pointLight position={[2.5, 2.3, 6.5]} intensity={3.6} distance={6.5} color="#564f6a" />
+      <pointLight position={[4.5, 2.3, 11]} intensity={4.8} distance={8} color="#5d5a78" />
+      <pointLight position={[7.75, 2.3, 6.5]} intensity={3.8} distance={6} color="#4d4a62" />
+      <pointLight position={[12.75, 2.3, 4.5]} intensity={4.4} distance={7} color="#4f5a6e" />
+      <pointLight position={[7.75, 2.3, 2]} intensity={2.8} distance={5} color="#48505e" />
       {/* fridge seam glow */}
-      <pointLight position={[14.1, 0.9, 1.4]} intensity={0.5} distance={2} color="#aac6e8" />
+      <pointLight position={[14.1, 0.9, 1.4]} intensity={1.2} distance={2.4} color="#aac6e8" />
     </>
   );
 }

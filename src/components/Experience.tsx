@@ -20,7 +20,7 @@ export default function Experience() {
   return (
     <>
       <color attach="background" args={['#06070d']} />
-      <fog attach="fog" args={['#06070d', 6, 26]} />
+      <fog attach="fog" args={['#06070d', 10, 34]} />
       <Suspense fallback={null}>
         <Physics gravity={[0, -9.81, 0]}>
           <House />

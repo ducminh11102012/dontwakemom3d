@@ -13,7 +13,7 @@ export default function PostFX() {
   const v = Math.min(1, tier / 10);
   return (
     <EffectComposer>
-      <Vignette eskil={false} offset={0.28 - v * 0.12} darkness={0.78 + v * 0.5} />
+      <Vignette eskil={false} offset={0.34 - v * 0.14} darkness={0.52 + v * 0.55} />
       <Noise premultiply blendFunction={BlendFunction.ADD} opacity={0.06 + v * 0.22} />
     </EffectComposer>
   );
