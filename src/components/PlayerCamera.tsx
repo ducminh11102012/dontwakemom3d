@@ -1,59 +1,64 @@
 /**
- * PlayerCamera.tsx
- * ----------------
- * FPS mouse-look (Phase 1).
- *
- * Responsibilities — LOOK ONLY, never position (PlayerController owns that):
- *  - PointerLockControls is used EXCLUSIVELY to lock/unlock the pointer
- *    (`pointerSpeed={0}` disables its built-in rotation entirely).
- *  - Rotation is handled manually from `mousemove` deltas:
- *      yaw/pitch live in the `playerLook` ref-like singleton,
- *      pitch is clamped to ±PITCH_CLAMP (±85°),
- *      the camera Euler order is always 'YXZ' so roll can never appear.
- *  - Lock/unlock events drive gamePhase: lock → 'playing',
- *    unlock (Escape) → 'paused'.
- *
- * Yaw is exposed through `playerLook` for the movement code.
+ * PlayerCamera.tsx — mouse look + pointer-lock lifecycle.
+ * Look only (PlayerController owns position). Adds panic/chase hand-shake.
  */
 
 import { useEffect } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
-import { PointerLockControls } from '@react-three/drei';
 import { MOUSE_SENSITIVITY, PITCH_CLAMP } from '../constants';
 import { useGameStore } from '../state/gameStore';
 import { playerLook } from '../systems/playerLook';
+import { runtime } from '../game/runtime';
 
 export default function PlayerCamera() {
   const gl = useThree((s) => s.gl);
-  const setGamePhase = useGameStore((s) => s.setGamePhase);
+  const gamePhase = useGameStore((s) => s.gamePhase);
 
-  // Manual mouse-look: only while the pointer is actually locked.
+  // manual mouse-look while locked
   useEffect(() => {
     const onMouseMove = (e: MouseEvent) => {
       if (document.pointerLockElement !== gl.domElement) return;
       playerLook.yaw -= e.movementX * MOUSE_SENSITIVITY;
       playerLook.pitch -= e.movementY * MOUSE_SENSITIVITY;
-      playerLook.pitch = Math.max(
-        -PITCH_CLAMP,
-        Math.min(PITCH_CLAMP, playerLook.pitch),
-      );
+      playerLook.pitch = Math.max(-PITCH_CLAMP, Math.min(PITCH_CLAMP, playerLook.pitch));
     };
     document.addEventListener('mousemove', onMouseMove);
     return () => document.removeEventListener('mousemove', onMouseMove);
   }, [gl]);
 
-  // Apply yaw/pitch every frame. Euler order YXZ → yaw, then pitch, no roll.
-  useFrame(({ camera }) => {
+  // request lock when entering play (the triggering click is the gesture)
+  useEffect(() => {
+    if (gamePhase === 'playing' && document.pointerLockElement !== gl.domElement) {
+      gl.domElement.requestPointerLock?.();
+    }
+    if ((gamePhase === 'caught' || gamePhase === 'ending' || gamePhase === 'menu') &&
+        document.pointerLockElement) {
+      document.exitPointerLock();
+    }
+  }, [gamePhase, gl]);
+
+  // losing lock during play = pause
+  useEffect(() => {
+    const onChange = () => {
+      const s = useGameStore.getState();
+      if (document.pointerLockElement !== gl.domElement && s.gamePhase === 'playing') {
+        s.setGamePhase('paused');
+      }
+    };
+    document.addEventListener('pointerlockchange', onChange);
+    return () => document.removeEventListener('pointerlockchange', onChange);
+  }, [gl]);
+
+  useFrame(({ camera, clock }) => {
     camera.rotation.order = 'YXZ';
-    camera.rotation.set(playerLook.pitch, playerLook.yaw, 0);
+    let shake = 0;
+    if (runtime.stress >= 95 || runtime.momState === 'chase') shake = 0.004;
+    else if (runtime.stress >= 81) shake = 0.0018;
+    const t = clock.elapsedTime;
+    const jx = shake * Math.sin(t * 31.7) * Math.sin(t * 13.1);
+    const jy = shake * Math.sin(t * 27.3) * Math.cos(t * 11.7);
+    camera.rotation.set(playerLook.pitch + jx, playerLook.yaw + jy, 0);
   });
 
-  return (
-    <PointerLockControls
-      domElement={gl.domElement}
-      pointerSpeed={0} // rotation is OURS; controls only lock/unlock
-      onLock={() => setGamePhase('playing')}
-      onUnlock={() => setGamePhase('paused')}
-    />
-  );
+  return null;
 }

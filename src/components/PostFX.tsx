@@ -1,19 +1,20 @@
 /**
- * PostFX.tsx
- * ----------
- * Minimal post-processing pipeline (Phase 1).
- *
- * Currently only a light vignette: it establishes the EffectComposer pipeline
- * that later phases extend (film grain, chromatic aberration, sanity-driven
- * distortion in Phase 4) and immediately pushes the image toward horror.
+ * PostFX.tsx — stress-driven post processing: vignette closes in,
+ * film grain rises with stress (GDD §5 visual tiers).
  */
 
-import { EffectComposer, Vignette } from '@react-three/postprocessing';
+import { EffectComposer, Noise, Vignette } from '@react-three/postprocessing';
+import { BlendFunction } from 'postprocessing';
+import { useGameStore } from '../state/gameStore';
 
 export default function PostFX() {
+  // coarse-grained selector → re-render only when the tier moves
+  const tier = useGameStore((s) => Math.round(s.stress / 10));
+  const v = Math.min(1, tier / 10);
   return (
     <EffectComposer>
-      <Vignette eskil={false} offset={0.22} darkness={0.78} />
+      <Vignette eskil={false} offset={0.28 - v * 0.12} darkness={0.78 + v * 0.5} />
+      <Noise premultiply blendFunction={BlendFunction.ADD} opacity={0.06 + v * 0.22} />
     </EffectComposer>
   );
 }

@@ -1,49 +1,44 @@
-# THE NINTH FLOOR
+# DON'T WAKE MOM (3D)
 
-First-person psychological horror in the browser. Stealth + exploration — no
-combat, no weapons.
+A first-person 3D stealth horror-comedy built with **three.js** (React Three Fiber + Rapier).
 
-> You are a night-shift office cleaner. Your phone falls into the service
-> elevator and the elevator takes it to **Floor 9** — a floor that does not
-> exist on any directory. The doors won't open again until you find it. And
-> something already lives up there.
+> 2:07 AM. Mom confiscated your phone at dinner. It's somewhere in the house.
+> Find it. Reply to Mina. Put it back. Get to bed. **DON'T. WAKE. MOM.**
 
-## Tech Stack
+**▶ Play: https://ducminh11102012.github.io/dontwakemom3d/**
 
-- [Vite](https://vitejs.dev/) + React 19 + TypeScript (strict)
-- [three.js](https://threejs.org/) via [@react-three/fiber](https://docs.pmnd.rs/react-three-fiber)
-- [@react-three/drei](https://github.com/pmndrs/drei), [@react-three/rapier](https://github.com/pmndrs/react-three-rapier) (physics), [@react-three/postprocessing](https://github.com/pmndrs/react-postprocessing)
-- [zustand](https://github.com/pmndrs/zustand) (global game state)
-- [Howler.js](https://howlerjs.com/) + native Web Audio API (spatial audio)
-- All geometry from primitives, all textures and audio generated procedurally
-  at runtime — **zero external assets** by design.
+## Features
 
-## Getting Started
+- Full house: 7 rooms, doors (Mom's door *always* creaks), lockable bathroom
+- Mom AI: sleep / investigate / search / patrol / chase / return + **fake sleep** and hard-mode memory
+- Sound propagation per floor type (carpet / tile / wood), wall attenuation
+- Stress system: panic at 100, hold breath (B) to calm down
+- Phone hunt with tiered hiding spots + fake buzz spots, search-and-leave-evidence
+- Act 2 reply choice (or chicken out), Act 3 buzz finale with 10-second scramble
+- 4 endings incl. a secret one, 3 difficulties, fully procedural positional audio
+- 100 % code-generated assets — no downloads, no models, no samples
+
+## Controls
+
+| Key | Action |
+| --- | --- |
+| WASD / mouse | move / look |
+| CTRL or C | crouch (quiet) |
+| SHIFT | sprint (loud, stamina) |
+| E | interact: search, doors, hide, put phone back |
+| F | flashlight (after you find it) |
+| B | hold breath (–stress, 15 s cooldown) |
+| Q | listen while hiding |
+| R | lock the bathroom door |
+| M / Tab | floor map (Easy/Normal) |
+
+## Development
 
 ```bash
 npm install
 npm run dev      # start dev server
 npm run build    # type-check + production build
+npm run lint
 ```
 
-Requires Node.js 20+.
-
-## Project Status
-
-Built in numbered phases. Current: **Phase 0 — project setup** ✅
-
-See `docs/PHASE_0_BRIEF.md` for the master design brief and the full phase
-roadmap, and `PHASE_0_NOTES.md` for the latest implementation notes.
-
-## Structure
-
-```
-src/
-├── App.tsx               # Root component (placeholder until Phase 1)
-├── constants.ts          # ALL gameplay tuning numbers live here
-├── state/gameStore.ts    # zustand store — all cross-system game state
-├── components/           # R3F scene components (from Phase 1)
-├── systems/              # Audio manager, AI, noise events (from Phase 3+)
-├── ui/                   # DOM overlays: HUD, menus (from Phase 1+)
-└── utils/                # Procedural texture/audio generators (from Phase 2+)
-```
+Design doc: [`docs/GDD_v2.md`](docs/GDD_v2.md)

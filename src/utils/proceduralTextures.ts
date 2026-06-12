@@ -1,14 +1,6 @@
 /**
- * proceduralTextures.ts
- * ---------------------
- * Code-generated 256×256 CanvasTextures (Phase 2) — no external image assets
- * (asset strategy, brief §0.4). All textures are cached so every room shares
- * the exact same texture instance (memory + the loop-illusion requirement
- * that corridors look pixel-identical).
- *
- * All textures: RepeatWrapping both axes, sRGB color space. Callers that need
- * a different repeat must CLONE the texture before changing `repeat`
- * (clones share the underlying image, so this stays cheap).
+ * proceduralTextures.ts — code-generated CanvasTextures, zero image assets.
+ * Palette follows GDD §19 (dark interior, no bright colors).
  */
 
 import * as THREE from 'three';
@@ -34,54 +26,42 @@ function finalize(canvas: HTMLCanvasElement, repeatX: number, repeatY: number) {
   return tex;
 }
 
-/** Dark office carpet: #3a3530 base, ~3000 noise dots, faint diagonal weave. */
-export function createCarpetTexture(): THREE.CanvasTexture {
-  const cached = cache.get('carpet');
-  if (cached) return cached;
-
-  const [canvas, ctx] = makeContext();
-  ctx.fillStyle = '#3a3530';
-  ctx.fillRect(0, 0, SIZE, SIZE);
-
-  // ~3000 random dots between #322d28 and #46403a.
-  const from = [0x32, 0x2d, 0x28];
-  const to = [0x46, 0x40, 0x3a];
-  for (let i = 0; i < 3000; i++) {
-    const t = Math.random();
-    const r = Math.round(from[0] + (to[0] - from[0]) * t);
-    const g = Math.round(from[1] + (to[1] - from[1]) * t);
-    const b = Math.round(from[2] + (to[2] - from[2]) * t);
-    ctx.fillStyle = `rgb(${r},${g},${b})`;
-    ctx.fillRect(Math.random() * SIZE, Math.random() * SIZE, 1.5, 1.5);
+function grain(ctx: CanvasRenderingContext2D, n: number, light: string, dark: string) {
+  for (let i = 0; i < n; i++) {
+    ctx.fillStyle = Math.random() > 0.5 ? light : dark;
+    ctx.fillRect(Math.random() * SIZE, Math.random() * SIZE, 1.4, 1.4);
   }
+}
 
-  // Faint diagonal stripes every 6 px.
-  ctx.strokeStyle = 'rgba(0, 0, 0, 0.07)';
-  ctx.lineWidth = 1;
-  for (let x = -SIZE; x < SIZE * 2; x += 6) {
+/** Bedroom/living carpet — muted dark plum (GDD: #2C1F3D family). */
+export function createCarpetTexture(): THREE.CanvasTexture {
+  const c = cache.get('carpet');
+  if (c) return c;
+  const [canvas, ctx] = makeContext();
+  ctx.fillStyle = '#241a30';
+  ctx.fillRect(0, 0, SIZE, SIZE);
+  grain(ctx, 3500, 'rgba(70,56,92,0.5)', 'rgba(18,12,26,0.55)');
+  ctx.strokeStyle = 'rgba(0,0,0,0.08)';
+  for (let x = -SIZE; x < SIZE * 2; x += 7) {
     ctx.beginPath();
     ctx.moveTo(x, 0);
     ctx.lineTo(x + SIZE, SIZE);
     ctx.stroke();
   }
-
-  const tex = finalize(canvas, 4, 4);
+  const tex = finalize(canvas, 3, 3);
   cache.set('carpet', tex);
   return tex;
 }
 
-/** Drop-ceiling tiles: #e8e4da base, grey 64px grid, 2–3 water stains. */
-export function createCeilingTileTexture(): THREE.CanvasTexture {
-  const cached = cache.get('ceiling');
-  if (cached) return cached;
-
+/** Kitchen/bathroom tile — cold desaturated teal-grey with grout grid. */
+export function createTileTexture(): THREE.CanvasTexture {
+  const c = cache.get('tile');
+  if (c) return c;
   const [canvas, ctx] = makeContext();
-  ctx.fillStyle = '#e8e4da';
+  ctx.fillStyle = '#1c2626';
   ctx.fillRect(0, 0, SIZE, SIZE);
-
-  // 1px grid every 64px.
-  ctx.strokeStyle = '#cfcabd';
-  ctx.lineWidth = 1;
+  ctx.strokeStyle = '#101717';
+  ctx.lineWidth = 3;
   for (let i = 0; i <= SIZE; i += 64) {
     ctx.beginPath();
     ctx.moveTo(i + 0.5, 0);
@@ -92,50 +72,98 @@ export function createCeilingTileTexture(): THREE.CanvasTexture {
     ctx.lineTo(SIZE, i + 0.5);
     ctx.stroke();
   }
-
-  // 2–3 water stains (radial gradients, #cdbb8a @ 0.15 alpha).
-  const stains = 2 + Math.floor(Math.random() * 2);
-  for (let i = 0; i < stains; i++) {
-    const cx = Math.random() * SIZE;
-    const cy = Math.random() * SIZE;
-    const radius = 24 + Math.random() * 40;
-    const grad = ctx.createRadialGradient(cx, cy, 4, cx, cy, radius);
-    grad.addColorStop(0, 'rgba(205, 187, 138, 0.15)');
-    grad.addColorStop(0.7, 'rgba(205, 187, 138, 0.10)');
-    grad.addColorStop(1, 'rgba(205, 187, 138, 0)');
-    ctx.fillStyle = grad;
-    ctx.fillRect(cx - radius, cy - radius, radius * 2, radius * 2);
+  // subtle sheen variation per tile
+  for (let tx = 0; tx < SIZE; tx += 64) {
+    for (let ty = 0; ty < SIZE; ty += 64) {
+      ctx.fillStyle = `rgba(255,255,255,${0.015 + Math.random() * 0.03})`;
+      ctx.fillRect(tx + 3, ty + 3, 58, 58);
+    }
   }
-
-  const tex = finalize(canvas, 1, 1);
-  cache.set('ceiling', tex);
+  grain(ctx, 1200, 'rgba(255,255,255,0.03)', 'rgba(0,0,0,0.06)');
+  const tex = finalize(canvas, 4, 4);
+  cache.set('tile', tex);
   return tex;
 }
 
-/** Aged office wallpaper: #c9c2b4 base, faint vertical stripes, grain. */
-export function createWallpaperTexture(): THREE.CanvasTexture {
-  const cached = cache.get('wallpaper');
-  if (cached) return cached;
-
+/** Hallway/storage wood — dark planks with visible boards. */
+export function createWoodTexture(): THREE.CanvasTexture {
+  const c = cache.get('wood');
+  if (c) return c;
   const [canvas, ctx] = makeContext();
-  ctx.fillStyle = '#c9c2b4';
+  ctx.fillStyle = '#2a1d12';
   ctx.fillRect(0, 0, SIZE, SIZE);
-
-  // Vertical stripes: 2px wide, 24px apart, low opacity.
-  ctx.fillStyle = 'rgba(189, 182, 168, 0.55)';
-  for (let x = 0; x < SIZE; x += 24) {
-    ctx.fillRect(x, 0, 2, SIZE);
+  const plankH = 32;
+  for (let y = 0; y < SIZE; y += plankH) {
+    const shade = 0.85 + Math.random() * 0.3;
+    ctx.fillStyle = `rgb(${Math.round(46 * shade)},${Math.round(32 * shade)},${Math.round(20 * shade)})`;
+    ctx.fillRect(0, y, SIZE, plankH - 2);
+    // wood grain lines
+    ctx.strokeStyle = 'rgba(20,12,6,0.35)';
+    ctx.lineWidth = 1;
+    for (let i = 0; i < 5; i++) {
+      const gy = y + 4 + Math.random() * (plankH - 8);
+      ctx.beginPath();
+      ctx.moveTo(0, gy);
+      ctx.bezierCurveTo(SIZE * 0.3, gy + 3, SIZE * 0.6, gy - 3, SIZE, gy + 1);
+      ctx.stroke();
+    }
+    // plank seam
+    ctx.fillStyle = 'rgba(0,0,0,0.55)';
+    ctx.fillRect(0, y + plankH - 2, SIZE, 2);
+    // butt joints
+    const bx = Math.random() * SIZE;
+    ctx.fillRect(bx, y, 2, plankH - 2);
   }
+  const tex = finalize(canvas, 2.5, 2.5);
+  cache.set('wood', tex);
+  return tex;
+}
 
-  // Light grain noise.
-  for (let i = 0; i < 1800; i++) {
-    const v = Math.random();
-    ctx.fillStyle =
-      v > 0.5 ? 'rgba(255,255,255,0.035)' : 'rgba(40,36,30,0.045)';
-    ctx.fillRect(Math.random() * SIZE, Math.random() * SIZE, 1, 1);
-  }
-
+/** Walls — deep night blue plaster (GDD: #1A1A2E). */
+export function createWallTexture(): THREE.CanvasTexture {
+  const c = cache.get('wall');
+  if (c) return c;
+  const [canvas, ctx] = makeContext();
+  ctx.fillStyle = '#1c1c30';
+  ctx.fillRect(0, 0, SIZE, SIZE);
+  grain(ctx, 2200, 'rgba(255,255,255,0.025)', 'rgba(0,0,0,0.06)');
+  // faint vertical wallpaper stripes
+  ctx.fillStyle = 'rgba(255,255,255,0.018)';
+  for (let x = 0; x < SIZE; x += 28) ctx.fillRect(x, 0, 3, SIZE);
   const tex = finalize(canvas, 2, 1);
-  cache.set('wallpaper', tex);
+  cache.set('wall', tex);
+  return tex;
+}
+
+/** Ceiling — near-black plaster. */
+export function createCeilingTexture(): THREE.CanvasTexture {
+  const c = cache.get('ceil');
+  if (c) return c;
+  const [canvas, ctx] = makeContext();
+  ctx.fillStyle = '#141420';
+  ctx.fillRect(0, 0, SIZE, SIZE);
+  grain(ctx, 1500, 'rgba(255,255,255,0.02)', 'rgba(0,0,0,0.05)');
+  const tex = finalize(canvas, 2, 2);
+  cache.set('ceil', tex);
+  return tex;
+}
+
+/** Fabric for beds/sofa. */
+export function createFabricTexture(base: string, key: string): THREE.CanvasTexture {
+  const c = cache.get(`fabric_${key}`);
+  if (c) return c;
+  const [canvas, ctx] = makeContext();
+  ctx.fillStyle = base;
+  ctx.fillRect(0, 0, SIZE, SIZE);
+  grain(ctx, 2600, 'rgba(255,255,255,0.04)', 'rgba(0,0,0,0.08)');
+  ctx.strokeStyle = 'rgba(0,0,0,0.05)';
+  for (let y = 0; y < SIZE; y += 5) {
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(SIZE, y);
+    ctx.stroke();
+  }
+  const tex = finalize(canvas, 1.5, 1.5);
+  cache.set(`fabric_${key}`, tex);
   return tex;
 }

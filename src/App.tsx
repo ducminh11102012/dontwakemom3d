@@ -1,52 +1,29 @@
 /**
- * App.tsx
- * -------
- * Application root (Phase 1): fullscreen R3F <Canvas> + the "Click to Play"
- * overlay that doubles as a temporary menu/pause screen until Phase 8.
- *
- * Flow:
- *  - gamePhase 'menu' / 'paused' → overlay visible, pointer unlocked.
- *  - Any click locks the pointer (PointerLockControls listens on document)
- *    → 'playing', overlay hidden.
- *  - Escape exits pointer lock natively → onUnlock → 'paused', overlay back.
+ * App.tsx — application root: fullscreen R3F canvas (keyed by runId so every
+ * new run remounts the whole scene) + HUD + full-screen overlays.
  */
 
 import { Canvas } from '@react-three/fiber';
-import { GAME_TITLE } from './constants';
 import { useGameStore } from './state/gameStore';
 import Experience from './components/Experience';
+import HUD from './components/ui/HUD';
+import Overlays from './components/ui/Overlays';
 import './App.css';
 
 export default function App() {
-  const gamePhase = useGameStore((s) => s.gamePhase);
-  const loopFlashId = useGameStore((s) => s.loopFlashId);
-  const showOverlay = gamePhase !== 'playing';
-
+  const runId = useGameStore((s) => s.runId);
   return (
     <div className="app-root">
       <Canvas
+        key={runId}
         camera={{ fov: 75, near: 0.05, far: 60 }}
         gl={{ antialias: true }}
-        dpr={[1, 2]}
+        dpr={[1, 1.75]}
       >
         <Experience />
       </Canvas>
-
-      {/* Non-Euclidean loop flash (Phase 2): keyed so each trigger replays. */}
-      {loopFlashId > 0 && <div key={loopFlashId} className="loop-flash" />}
-
-      {showOverlay && (
-        <div className="lock-overlay">
-          <p className="lock-floor">FLOOR 09</p>
-          <h1 className="lock-title">{GAME_TITLE}</h1>
-          <p className="lock-action">
-            {gamePhase === 'paused' ? 'paused — click to resume' : 'click to play'}
-          </p>
-          <p className="lock-hint">
-            WASD move · Shift sprint · Ctrl/C crouch · Esc pause
-          </p>
-        </div>
-      )}
+      <HUD />
+      <Overlays />
     </div>
   );
 }

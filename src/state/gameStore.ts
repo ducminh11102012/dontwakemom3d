@@ -1,123 +1,255 @@
 /**
- * gameStore.ts
- * ------------
- * Global zustand store — the single source of truth for ALL cross-system state
- * (section 0.6 of the project brief): game phase, player condition, inventory/
- * objective flags, Tenant AI state, settings/difficulty.
- *
- * Conventions:
- *  - Components read/write via the `useGameStore` hook. No prop drilling.
- *  - Per-frame values (player position, velocity...) stay in refs inside their
- *    systems; only push to this store when the UI must react.
- *  - AI / phase states are string literal unions, strictly typed.
- *
- * Phase 1 additions: `stamina`, `isCrouching`, `isSprinting` (+ setters).
- * NOTE: stamina is currently pushed to the store continuously while it changes
- * (clamped to whole-number changes inside the PlayerController). If this ever
- * shows up in profiling, throttle it / keep it in a ref — see PHASE_1_NOTES.md.
- *
- * Later phases extend it:
- *  - PHASE_4_TODO: sanity decay/regen actions + tier helpers
- *  - PHASE_5_TODO: Tenant state transitions driven by its state machine
- *  - PHASE_6_TODO: inventory/searchable-object integration, flashlight battery
- *  - PHASE_7_TODO: endings + restart flow
- *  - PHASE_8_TODO: difficulty modifiers table
+ * gameStore.ts — global zustand store: phase flow, acts, stress, inventory,
+ * Mom state snapshots for UI, endings. Per-frame values live in game/runtime.ts.
  */
 
 import { create } from 'zustand';
-import { FLASHLIGHT_BATTERY_MAX, SANITY_START, STAMINA_MAX } from '../constants';
+import type { MomStateId } from '../game/runtime';
+import { rollPhoneSpot } from '../game/spots';
+import { runtime } from '../game/runtime';
+import { resetPlayerLook } from '../systems/playerLook';
 
-// ── State unions ────────────────────────────────────────────────────────────
+export type GamePhase =
+  | 'menu'
+  | 'intro'
+  | 'playing'
+  | 'paused'
+  | 'phone' // reply UI open (Act 2)
+  | 'caught'
+  | 'ending';
 
-/** High-level application phase. */
-export type GamePhase = 'menu' | 'playing' | 'paused' | 'ending';
-
-/** The Tenant's AI state machine states (implemented in Phase 5). */
-export type TenantState = 'dormant' | 'patrol' | 'investigate' | 'hunt' | 'mimic';
-
-/** Difficulty modes (implemented in Phase 8). */
 export type Difficulty = 'easy' | 'normal' | 'hard';
+export type Act = 1 | 2 | 3;
+export type EndingId = 'goodnight' | 'coward' | 'caught' | 'waiting' | null;
 
-/** How a run ended (implemented in Phase 7). */
-export type EndingType = 'escaped' | 'caught' | 'secret' | null;
-
-// ── Store shape ─────────────────────────────────────────────────────────────
-
-export interface GameState {
-  // Application flow
-  gamePhase: GamePhase;
-  difficulty: Difficulty;
-  ending: EndingType;
-
-  // Player condition
-  sanity: number; // 0–100, see SANITY_* constants
-  stamina: number; // 0–100, see STAMINA_* constants (Phase 1)
-  isCrouching: boolean; // player is currently crouched (Phase 1)
-  isSprinting: boolean; // player is currently sprinting (Phase 1)
-  flashlightBattery: number; // 0–100 (Phase 6)
-  isHidden: boolean; // player is inside a hiding spot (Phase 6)
-
-  // Objectives
-  hasPhone: boolean;
-  hasBadge: boolean;
-
-  // The Tenant
-  tenantState: TenantState;
-
-  // FX (Phase 2): increments each time the loop corridor flash fires.
-  loopFlashId: number;
-
-  // Actions
-  setGamePhase: (phase: GamePhase) => void;
-  setDifficulty: (difficulty: Difficulty) => void;
-  setSanity: (sanity: number) => void;
-  setStamina: (stamina: number) => void;
-  setIsCrouching: (isCrouching: boolean) => void;
-  setIsSprinting: (isSprinting: boolean) => void;
-  setTenantState: (state: TenantState) => void;
-  triggerLoopFlash: () => void;
-  resetRun: () => void;
+export interface Notification {
+  id: number;
+  text: string;
 }
 
-// ── Initial values ──────────────────────────────────────────────────────────
+interface GameState {
+  gamePhase: GamePhase;
+  difficulty: Difficulty;
+  act: Act;
+  runId: number; // bumped on every new run → remounts the scene
 
-const initialRunState = {
-  ending: null as EndingType,
-  sanity: SANITY_START,
-  stamina: STAMINA_MAX,
-  isCrouching: false,
-  isSprinting: false,
-  flashlightBattery: FLASHLIGHT_BATTERY_MAX,
-  isHidden: false,
-  hasPhone: false,
-  hasBadge: false,
-  tenantState: 'dormant' as TenantState,
-};
+  // player
+  stamina: number;
+  isCrouching: boolean;
+  isSprinting: boolean;
+  isHiding: boolean;
+  hideSpotId: string | null;
+  hasFlashlight: boolean;
+  flashlightOn: boolean;
+  stress: number;
 
-// ── Store ───────────────────────────────────────────────────────────────────
+  // phone
+  phoneSpotId: string;
+  hasPhone: boolean;
+  phoneReturned: boolean;
+  replySent: boolean;
+  repliedText: string | null;
 
-export const useGameStore = create<GameState>()((set) => ({
+  // mom (UI snapshot)
+  momState: MomStateId;
+  momAwakeEver: boolean;
+
+  // finale
+  finaleActive: boolean;
+  finaleTimer: number;
+
+  // panic
+  panicTimer: number | null;
+
+  // UI
+  prompt: string | null;
+  searchProgress: number | null; // 0..1 while searching
+  subtitle: string | null;
+  notifications: Notification[];
+  objective: string;
+  ending: EndingId;
+  caughtLine: string;
+  bathroomLocked: boolean;
+
+  // actions
+  setGamePhase: (p: GamePhase) => void;
+  setDifficulty: (d: Difficulty) => void;
+  startRun: () => void;
+  beginPlay: () => void;
+  setStamina: (v: number) => void;
+  setIsCrouching: (v: boolean) => void;
+  setIsSprinting: (v: boolean) => void;
+  setHiding: (spotId: string | null) => void;
+  setHasFlashlight: (v: boolean) => void;
+  setFlashlightOn: (v: boolean) => void;
+  setStress: (v: number) => void;
+  setMomState: (s: MomStateId) => void;
+  pickUpPhone: () => void;
+  closePhone: (sent: boolean, text: string | null) => void;
+  setPhoneReturned: (v: boolean) => void;
+  setFinale: (active: boolean, timer: number) => void;
+  setPanicTimer: (v: number | null) => void;
+  setPrompt: (p: string | null) => void;
+  setSearchProgress: (v: number | null) => void;
+  setSubtitle: (s: string | null) => void;
+  notify: (text: string) => void;
+  setObjective: (o: string) => void;
+  catchPlayer: (line: string) => void;
+  finish: (e: EndingId) => void;
+  setBathroomLocked: (v: boolean) => void;
+}
+
+let notifId = 0;
+
+export const useGameStore = create<GameState>((set, get) => ({
   gamePhase: 'menu',
   difficulty: 'normal',
-  loopFlashId: 0,
-  ...initialRunState,
+  act: 1,
+  runId: 0,
+
+  stamina: 100,
+  isCrouching: false,
+  isSprinting: false,
+  isHiding: false,
+  hideSpotId: null,
+  hasFlashlight: false,
+  flashlightOn: false,
+  stress: 0,
+
+  phoneSpotId: 'kitchen_fridge',
+  hasPhone: false,
+  phoneReturned: false,
+  replySent: false,
+  repliedText: null,
+
+  momState: 'sleep',
+  momAwakeEver: false,
+
+  finaleActive: false,
+  finaleTimer: 0,
+
+  panicTimer: null,
+
+  prompt: null,
+  searchProgress: null,
+  subtitle: null,
+  notifications: [],
+  objective: 'Find your phone. Don’t wake Mom.',
+  ending: null,
+  caughtLine: '',
+  bathroomLocked: false,
 
   setGamePhase: (gamePhase) => set({ gamePhase }),
   setDifficulty: (difficulty) => set({ difficulty }),
-  setSanity: (sanity) => set({ sanity: Math.max(0, Math.min(100, sanity)) }),
-  setStamina: (stamina) =>
-    set({ stamina: Math.max(0, Math.min(STAMINA_MAX, stamina)) }),
+
+  startRun: () => {
+    runtime.reset();
+    resetPlayerLook();
+    return set((s) => ({
+      runId: s.runId + 1,
+      gamePhase: 'intro',
+      act: 1,
+      stamina: 100,
+      isCrouching: false,
+      isSprinting: false,
+      isHiding: false,
+      hideSpotId: null,
+      hasFlashlight: false,
+      flashlightOn: false,
+      stress: 0,
+      phoneSpotId: rollPhoneSpot(),
+      hasPhone: false,
+      phoneReturned: false,
+      replySent: false,
+      repliedText: null,
+      momState: 'sleep',
+      momAwakeEver: false,
+      finaleActive: false,
+      finaleTimer: 0,
+      panicTimer: null,
+      prompt: null,
+      searchProgress: null,
+      subtitle: null,
+      notifications: [],
+      objective: 'Find your phone. Don’t wake Mom.',
+      ending: null,
+      caughtLine: '',
+      bathroomLocked: false,
+    }));
+  },
+
+  beginPlay: () => set({ gamePhase: 'playing' }),
+
+  setStamina: (stamina) => set({ stamina }),
   setIsCrouching: (isCrouching) => set({ isCrouching }),
   setIsSprinting: (isSprinting) => set({ isSprinting }),
-  setTenantState: (tenantState) => set({ tenantState }),
-  triggerLoopFlash: () => set((s) => ({ loopFlashId: s.loopFlashId + 1 })),
+  setHiding: (hideSpotId) => set({ isHiding: hideSpotId !== null, hideSpotId }),
+  setHasFlashlight: (hasFlashlight) => set({ hasFlashlight }),
+  setFlashlightOn: (flashlightOn) => set({ flashlightOn }),
+  setStress: (stress) => set({ stress }),
 
-  /** Reset everything that belongs to a single run (used by restart flow). */
-  resetRun: () => set({ ...initialRunState }),
+  setMomState: (momState) =>
+    set((s) => ({
+      momState,
+      momAwakeEver: s.momAwakeEver || (momState !== 'sleep' && momState !== 'fakeSleep'),
+    })),
+
+  pickUpPhone: () =>
+    set({ hasPhone: true, act: 2, gamePhase: 'phone', objective: 'Reply… if you dare.' }),
+
+  closePhone: (sent, text) => {
+    if (sent) {
+      set({
+        replySent: true,
+        repliedText: text,
+        gamePhase: 'playing',
+        act: 3,
+        objective: 'PUT IT BACK. GET TO BED.',
+      });
+    } else {
+      set({
+        gamePhase: 'playing',
+        objective: 'Put the phone back where you found it, then get to bed.',
+      });
+    }
+  },
+
+  setPhoneReturned: (phoneReturned) =>
+    set((s) => ({
+      phoneReturned,
+      hasPhone: !phoneReturned,
+      objective: phoneReturned
+        ? 'Get to your bed. Pretend you were asleep.'
+        : s.objective,
+    })),
+
+  setFinale: (finaleActive, finaleTimer) => set({ finaleActive, finaleTimer }),
+  setPanicTimer: (panicTimer) => set({ panicTimer }),
+  setPrompt: (prompt) => {
+    if (get().prompt !== prompt) set({ prompt });
+  },
+  setSearchProgress: (searchProgress) => set({ searchProgress }),
+  setSubtitle: (subtitle) => set({ subtitle }),
+
+  notify: (text) => {
+    const id = ++notifId;
+    set((s) => ({ notifications: [...s.notifications.slice(-2), { id, text }] }));
+    setTimeout(() => {
+      set((s) => ({ notifications: s.notifications.filter((n) => n.id !== id) }));
+    }, 3500);
+  },
+
+  setObjective: (objective) => set({ objective }),
+
+  catchPlayer: (line) => {
+    if (get().gamePhase === 'caught' || get().gamePhase === 'ending') return;
+    set({ gamePhase: 'caught', caughtLine: line, ending: 'caught' });
+  },
+
+  finish: (ending) => {
+    if (get().gamePhase === 'ending' || get().gamePhase === 'caught') return;
+    set({ gamePhase: 'ending', ending });
+  },
+
+  setBathroomLocked: (bathroomLocked) => set({ bathroomLocked }),
 }));
-
-// ── Dev-only debug handle (smoke tests; stripped from production builds) ────
-if (import.meta.env.DEV && typeof window !== 'undefined') {
-  (window as unknown as Record<string, unknown>).__NINTH_FLOOR_STORE__ =
-    useGameStore;
-}
