@@ -9,7 +9,7 @@ import { HIDE_SPOTS, SEARCH_SPOTS, getSpot, type HideSpot, type SearchSpot } fro
 import { useGameStore } from '../state/gameStore';
 import { SAFE_POS } from '../constants';
 
-export const FLASHLIGHT_POS: [number, number, number] = [10.6, 0.82, 9.62];
+export const FLASHLIGHT_POS: [number, number, number] = [12.4, 0.82, 12.3];
 
 export type Interactable =
   | { type: 'search'; spot: SearchSpot; label: string }
