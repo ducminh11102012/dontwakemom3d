@@ -359,6 +359,15 @@ function Stairs() {
     steps.push({ z, y: topY - 0.04, h: 0.08 });
   }
 
+  // banister along the open (west) side — must NOT cover the top landing,
+  // or it walls off the exit onto the upstairs hallway (gap at z 4.69-5.7;
+  // the stairwell railing takes over at z 5.7)
+  const BAN_Z0 = 5.75;
+  const BAN_Z1 = STAIR_Z_BOTTOM + 0.15;
+  const banCz = (BAN_Z0 + BAN_Z1) / 2;
+  const banLen = ((BAN_Z1 - BAN_Z0) / run) * Math.hypot(run, LEVEL_Y);
+  const rampYAt = (z: number) => ((STAIR_Z_BOTTOM - z) / run) * LEVEL_Y; // unclamped
+
   // under-stair stringer colliders (walkable ramp handled by PlayerController)
   const stringers = [
     { z0: 5.0, z1: 6.0, top: 1.78 },
@@ -381,13 +390,13 @@ function Stairs() {
       >
         <boxGeometry args={[width, 0.12, Math.hypot(run, LEVEL_Y)]} />
       </mesh>
-      {/* banister along the open (west) side of the stairs */}
+      {/* banister along the open (west) side of the stairs (stops short of the top landing) */}
       <mesh
-        position={[STAIR_X0 + 0.04, LEVEL_Y / 2 + 0.62, (STAIR_Z_TOP + STAIR_Z_BOTTOM) / 2]}
+        position={[STAIR_X0 + 0.04, rampYAt(banCz) + 0.62, banCz]}
         rotation={[Math.atan2(LEVEL_Y, run), 0, 0]}
         material={darkMat}
       >
-        <boxGeometry args={[0.07, 0.1, Math.hypot(run, LEVEL_Y) + 0.4]} />
+        <boxGeometry args={[0.07, 0.1, banLen]} />
       </mesh>
       <RigidBody type="fixed" colliders={false}>
         {stringers.map((st, i) => (
@@ -397,10 +406,11 @@ function Stairs() {
             args={[width / 2, st.top / 2, (st.z1 - st.z0) / 2]}
           />
         ))}
-        {/* banister collider keeps the player from strafing off the open side */}
+        {/* banister collider keeps the player from strafing off the open side;
+            it ends at z 5.75 so the top landing exit (z 4.69-5.7) stays open */}
         <CuboidCollider
-          position={[STAIR_X0 + 0.04, LEVEL_Y / 2 + 0.5, (STAIR_Z_TOP + STAIR_Z_BOTTOM) / 2]}
-          args={[0.05, LEVEL_Y / 2 + 0.7, run / 2 + 0.2]}
+          position={[STAIR_X0 + 0.04, rampYAt(banCz) + 0.5, banCz]}
+          args={[0.05, LEVEL_Y / 2 + 0.7, (BAN_Z1 - BAN_Z0) / 2]}
         />
       </RigidBody>
     </group>
