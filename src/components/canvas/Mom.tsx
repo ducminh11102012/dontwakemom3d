@@ -58,6 +58,10 @@ export default function Mom() {
       // lying on her bed
       g.position.set(1.3, 0.78, 5.8);
       g.rotation.set(-Math.PI / 2, 0, 0);
+    } else if (runtime.momState === 'tranq') {
+      // knocked out cold, face down where the dart hit her
+      g.position.set(runtime.momX, 0.18, runtime.momZ);
+      g.rotation.set(Math.PI / 2, 0, runtime.momYaw + Math.PI);
     } else {
       walkPhase.current += dt * 7;
       const bob = Math.sin(walkPhase.current) * 0.02;

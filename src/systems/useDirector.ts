@@ -49,7 +49,10 @@ export function useDirector() {
     audioEngine.update(dt);
     if (!active) return;
 
-    const momAsleep = runtime.momState === 'sleep' || runtime.momState === 'fakeSleep';
+    const momAsleep =
+      runtime.momState === 'sleep' ||
+      runtime.momState === 'fakeSleep' ||
+      runtime.momState === 'tranq';
     const easy = store.difficulty === 'easy';
     lookCooldown.current = Math.max(0, lookCooldown.current - dt);
     approachCooldown.current = Math.max(0, approachCooldown.current - dt);

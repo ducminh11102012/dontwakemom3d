@@ -6,9 +6,75 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { ROOMS } from '../../game/house';
-import { runtime } from '../../game/runtime';
+import { emitNoise, runtime } from '../../game/runtime';
 import { playerLook } from '../../systems/playerLook';
 import { useGameStore } from '../../state/gameStore';
+import { audioEngine } from '../../systems/audio';
+import { SAFE_POS, SAFE_WRONG_CODE_NOISE } from '../../constants';
+
+/** Safe keypad — type the 4-digit code (kbd only; the pointer stays locked). */
+function Keypad() {
+  const keypadOpen = useGameStore((s) => s.keypadOpen);
+  if (!keypadOpen) return null;
+  return <KeypadPanel />;
+}
+
+function KeypadPanel() {
+  const [entry, setEntry] = useState('');
+  const [shake, setShake] = useState(false);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const store = useGameStore.getState();
+      if (e.code === 'Escape' || e.code === 'KeyE') {
+        store.setKeypadOpen(false);
+        return;
+      }
+      if (e.code === 'Backspace') {
+        setEntry((v) => v.slice(0, -1));
+        return;
+      }
+      const m = e.code.match(/^(?:Digit|Numpad)(\d)$/);
+      if (!m) return;
+      e.preventDefault();
+      audioEngine.uiBeep(620 + Number(m[1]) * 18, 0.03);
+      setEntry((v) => {
+        const next = (v + m[1]).slice(0, 4);
+        if (next.length === 4) {
+          if (next === store.safeCode) {
+            audioEngine.uiBeep(880, 0.12);
+            store.openSafe();
+            store.notify('A tranquilizer gun?! Click — shoot. Why does Mom own this?');
+          } else {
+            // the safe buzzes angrily — Mom can hear that
+            audioEngine.uiBeep(160, 0.25);
+            emitNoise(SAFE_POS[0], SAFE_POS[2], SAFE_WRONG_CODE_NOISE, 'safe');
+            setShake(true);
+            setTimeout(() => setShake(false), 450);
+            return '';
+          }
+        }
+        return next;
+      });
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  return (
+    <div className={`keypad ${shake ? 'keypad-shake' : ''}`}>
+      <div className="keypad-title">SAFE — ENTER CODE</div>
+      <div className="keypad-display">
+        {[0, 1, 2, 3].map((i) => (
+          <span key={i} className={`keypad-digit ${entry[i] ? 'filled' : ''}`}>
+            {entry[i] ?? '·'}
+          </span>
+        ))}
+      </div>
+      <div className="keypad-hint">0–9 type · backspace · E/ESC step away</div>
+    </div>
+  );
+}
 
 function MapOverlay() {
   const difficulty = useGameStore((s) => s.difficulty);
@@ -96,6 +162,11 @@ export default function HUD() {
   const stress = useGameStore((s) => s.stress);
   const difficulty = useGameStore((s) => s.difficulty);
   const hasFlashlight = useGameStore((s) => s.hasFlashlight);
+  const hasStorageKey = useGameStore((s) => s.hasStorageKey);
+  const knowsCode = useGameStore((s) => s.knowsCode);
+  const safeCode = useGameStore((s) => s.safeCode);
+  const hasTranqGun = useGameStore((s) => s.hasTranqGun);
+  const darts = useGameStore((s) => s.darts);
 
   if (gamePhase !== 'playing' && gamePhase !== 'phone') return null;
 
@@ -153,7 +224,21 @@ export default function HUD() {
 
         {prompt && <div className="prompt">{prompt}</div>}
         {subtitle && <div className="subtitle">{subtitle}</div>}
+
+        {(hasStorageKey || knowsCode || hasTranqGun || darts > 0) && (
+          <div className="inventory">
+            {hasStorageKey && <span className="inv-item">🗝 brass key</span>}
+            {knowsCode && <span className="inv-item">✎ code {safeCode}</span>}
+            {hasTranqGun && (
+              <span className="inv-item inv-gun">
+                ➶ tranq gun × {darts} {darts > 0 ? '· CLICK to fire' : '(empty)'}
+              </span>
+            )}
+            {!hasTranqGun && darts > 0 && <span className="inv-item">➶ dart × {darts}</span>}
+          </div>
+        )}
       </div>
+      <Keypad />
       <MapOverlay />
     </>
   );

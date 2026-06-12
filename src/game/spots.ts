@@ -83,6 +83,30 @@ export function rollPhoneSpot(rng: () => number = Math.random): string {
   return candidates[Math.floor(rng() * candidates.length)].id;
 }
 
+/**
+ * Granny-style item placement: storage key, safe-code note and a spare dart
+ * hide in random search spots each run. Key + note never spawn inside the
+ * locked storage room (or you could never reach them) and never share a spot
+ * with the phone or each other.
+ */
+export function rollItemSpots(
+  phoneSpotId: string,
+  rng: () => number = Math.random,
+): { keySpotId: string; noteSpotId: string; dartSpotId: string } {
+  const taken = new Set<string>([phoneSpotId]);
+  const pick = (candidates: SearchSpot[]): string => {
+    const free = candidates.filter((s) => !taken.has(s.id));
+    const id = free[Math.floor(rng() * free.length)].id;
+    taken.add(id);
+    return id;
+  };
+  const outsideStorage = SEARCH_SPOTS.filter((s) => s.room !== 'storage');
+  const keySpotId = pick(outsideStorage);
+  const noteSpotId = pick(outsideStorage);
+  const dartSpotId = pick(SEARCH_SPOTS);
+  return { keySpotId, noteSpotId, dartSpotId };
+}
+
 export function getSpot(id: string): SearchSpot {
   const s = SEARCH_SPOTS.find((s) => s.id === id);
   if (!s) throw new Error(`unknown search spot ${id}`);

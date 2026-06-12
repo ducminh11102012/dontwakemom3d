@@ -5,7 +5,11 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useGameStore, type Difficulty, type EndingId } from '../../state/gameStore';
-import { REPLY_COUNTDOWN } from '../../constants';
+import {
+  JUMPSCARE_FACE_SECONDS,
+  JUMPSCARE_SCREAM_SECONDS,
+  REPLY_COUNTDOWN,
+} from '../../constants';
 import { audioEngine } from '../../systems/audio';
 
 // ── menu ────────────────────────────────────────────────────────────────────
@@ -53,8 +57,11 @@ function Menu() {
         SNEAK OUT
       </button>
       <p className="controls-hint">
-        WASD move · CTRL crouch · SHIFT run · E interact · F flashlight · B hold breath · Q listen ·
-        R lock door · headphones strongly recommended
+        WASD move · CTRL sneak quietly · SHIFT run · E interact · F flashlight · B hold breath ·
+        Q listen · R lock door · CLICK fire tranq dart · headphones strongly recommended
+      </p>
+      <p className="controls-hint">
+        she roams now. find the brass key → unlock the storage room → crack the safe → tranq gun.
       </p>
     </div>
   );
@@ -250,16 +257,68 @@ const ENDINGS: Record<Exclude<EndingId, null>, { title: string; body: string; gr
   },
 };
 
+/**
+ * Caught jumpscare: Mom's face fills the black screen, then everything goes
+ * dark — and after ~3 s the scream plays in the darkness (Minh's request).
+ */
+function CaughtJumpscare({ onDone }: { onDone: () => void }) {
+  const [dark, setDark] = useState(false);
+  const done = useRef(false);
+
+  useEffect(() => {
+    audioEngine.stinger();
+    audioEngine.stopScene();
+    const scream = new Audio(`${import.meta.env.BASE_URL}scream.mp3`);
+    scream.volume = 1;
+    const finish = () => {
+      if (done.current) return;
+      done.current = true;
+      onDone();
+    };
+    const tDark = setTimeout(() => {
+      setDark(true);
+      scream.addEventListener('ended', finish);
+      scream.play().catch(() => undefined);
+    }, JUMPSCARE_FACE_SECONDS * 1000);
+    // safety net in case the audio can't play
+    const tEnd = setTimeout(
+      finish,
+      (JUMPSCARE_FACE_SECONDS + JUMPSCARE_SCREAM_SECONDS) * 1000,
+    );
+    return () => {
+      clearTimeout(tDark);
+      clearTimeout(tEnd);
+      scream.pause();
+    };
+  }, [onDone]);
+
+  return (
+    <div className="jumpscare">
+      {!dark && (
+        <img
+          className="jumpscare-face"
+          src={`${import.meta.env.BASE_URL}mom_scare.webp`}
+          alt=""
+          draggable={false}
+        />
+      )}
+    </div>
+  );
+}
+
 function EndScreen({ caught }: { caught: boolean }) {
   const ending = useGameStore((s) => s.ending);
   const caughtLine = useGameStore((s) => s.caughtLine);
   const startRun = useGameStore((s) => s.startRun);
   const setGamePhase = useGameStore((s) => s.setGamePhase);
+  const [scareDone, setScareDone] = useState(!caught);
   const e = ENDINGS[(ending ?? 'caught') as Exclude<EndingId, null>];
   useEffect(() => {
-    if (caught) audioEngine.stinger();
-    audioEngine.stopScene();
+    if (!caught) audioEngine.stopScene();
   }, [caught]);
+  if (caught && !scareDone) {
+    return <CaughtJumpscare onDone={() => setScareDone(true)} />;
+  }
   return (
     <div className={`overlay end ${caught ? 'end-caught' : 'end-good'}`}>
       {caught && <p className="mom-line">“{caughtLine}”</p>}

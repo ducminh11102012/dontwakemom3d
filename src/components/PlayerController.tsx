@@ -5,7 +5,7 @@
  * hold-breath, peek. Camera position follows the body (or the hide spot).
  */
 
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber';
 import { CapsuleCollider, RigidBody, type RapierRigidBody } from '@react-three/rapier';
@@ -43,9 +43,11 @@ import {
   STAMINA_SPRINT_THRESHOLD,
   STUMBLE_DURATION,
   STUMBLE_SPEED,
+  TRANQ_AIM_DOT,
+  TRANQ_RANGE,
 } from '../constants';
 import { getRoom, roomAt } from '../game/house';
-import { emitNoise, runtime } from '../game/runtime';
+import { blockersBetween, emitNoise, runtime } from '../game/runtime';
 import { findInteractable, FLASHLIGHT_POS } from '../game/interactions';
 import { getHideSpot, SEARCH_CLASS_DATA, getSpot } from '../game/spots';
 import { momAIRef } from '../game/momAI';
@@ -83,6 +85,17 @@ export default function PlayerController() {
   const breathSoundTimer = useRef(0);
   const searching = useRef<{ id: string; t: number; dur: number; isReturn: boolean } | null>(null);
   const peekCooldown = useRef(0);
+  const shootQueued = useRef(false);
+
+  // tranq gun: left click while pointer-locked fires a dart
+  useEffect(() => {
+    const onMouseDown = (e: MouseEvent) => {
+      if (e.button !== 0 || !document.pointerLockElement) return;
+      shootQueued.current = true;
+    };
+    window.addEventListener('mousedown', onMouseDown);
+    return () => window.removeEventListener('mousedown', onMouseDown);
+  }, []);
 
   const handleBreath = (
     held: boolean,
@@ -143,12 +156,23 @@ export default function PlayerController() {
         emitNoise(hit.spot.x, hit.spot.z, 0.12, 'hide');
         break;
       }
+      case 'safe': {
+        store.setKeypadOpen(true);
+        audioEngine.uiBeep(540, 0.04);
+        break;
+      }
       case 'door': {
         const d = hit.door;
         if (runtime.doorLocked[d.id]) {
+          if (hit.needsKey) {
+            store.notify('Locked tight. There must be a key somewhere.');
+            audioEngine.uiBeep(220, 0.07);
+            break;
+          }
           runtime.doorLocked[d.id] = false;
-          store.setBathroomLocked(false);
-          store.notify('Door unlocked.');
+          if (d.id === 'd_bath') store.setBathroomLocked(false);
+          store.notify(d.id === 'd_storage' ? 'The brass key fits. Click.' : 'Door unlocked.');
+          audioEngine.uiBeep(620, 0.05);
           break;
         }
         const open = runtime.doorOpen[d.id] ?? (d.startsOpen ? 1 : 0);
@@ -240,7 +264,27 @@ export default function PlayerController() {
             audioEngine.uiBeep(900, 0.07);
             store.pickUpPhone();
           } else {
-            store.notify('Nothing here…');
+            // Granny loop: keys, notes and darts hide in the clutter
+            let found = false;
+            if (s.id === store.keySpotId && !store.hasStorageKey) {
+              store.findKey();
+              store.notify('A small brass key. The storage room…');
+              audioEngine.uiBeep(780, 0.06);
+              found = true;
+            }
+            if (s.id === store.noteSpotId && !store.knowsCode) {
+              store.findNote();
+              store.notify(`A crumpled note: “safe — ${store.safeCode}”`);
+              audioEngine.uiBeep(700, 0.06);
+              found = true;
+            }
+            if (s.id === store.dartSpotId) {
+              store.findDart();
+              store.notify('A tranquilizer dart. Why does Mom own these?');
+              audioEngine.uiBeep(660, 0.06);
+              found = true;
+            }
+            if (!found) store.notify('Nothing here…');
           }
         }
         searching.current = null;
@@ -346,8 +390,39 @@ export default function PlayerController() {
     const feetY = pos.y - PLAYER_CAPSULE_HALF_TOTAL;
     camera.position.set(pos.x, feetY + eyeHeight.current, pos.z);
 
+    // ── tranq gun ────────────────────────────────────────────────────────────
+    const wantShoot = shootQueued.current;
+    shootQueued.current = false;
+    if (playing && !store.keypadOpen && wantShoot && store.hasTranqGun) {
+      if (store.darts <= 0) {
+        store.notify('Out of darts.');
+        audioEngine.uiBeep(200, 0.08);
+      } else {
+        store.useDart();
+        audioEngine.uiBeep(170, 0.1); // soft pneumatic pfft
+        emitNoise(runtime.playerX, runtime.playerZ, 0.22, 'dart');
+        const dir = new THREE.Vector3();
+        camera.getWorldDirection(dir);
+        const toMom = new THREE.Vector3(
+          runtime.momX - camera.position.x,
+          1.1 - camera.position.y,
+          runtime.momZ - camera.position.z,
+        );
+        const dist = Math.hypot(toMom.x, toMom.z);
+        toMom.normalize();
+        const aimed = dir.dot(toMom) > (dist < 2.5 ? 0.9 : TRANQ_AIM_DOT);
+        const clear =
+          blockersBetween(runtime.playerX, runtime.playerZ, runtime.momX, runtime.momZ) === 0;
+        if (aimed && clear && dist <= TRANQ_RANGE) {
+          momAIRef.current?.tranquilize();
+        } else {
+          store.notify('The dart whiffs into the dark…');
+        }
+      }
+    }
+
     // ── interactions ─────────────────────────────────────────────────────────
-    if (playing) {
+    if (playing && !store.keypadOpen) {
       const hit = findInteractable(playerLook.yaw);
       let prompt: string | null = null;
       if (hit) {
@@ -382,6 +457,8 @@ export default function PlayerController() {
       }
 
       handleBreath(input.holdBreath, dt, store, !isMoving);
+    } else if (store.keypadOpen) {
+      store.setPrompt('type the 4-digit code · ESC — step away');
     }
 
     prevInteract.current = input.interact;
@@ -461,6 +538,7 @@ function peekHint(camYaw: number): string {
   const st = runtime.momState;
   if (st === 'sleep') return 'You hear soft, steady snoring in the distance.';
   if (st === 'fakeSleep') return 'Silence. Total silence. That can’t be good.';
+  if (st === 'tranq') return 'Nothing. She’s still out cold. For now.';
   const bearing = Math.atan2(dx, -dz) - camYaw;
   const s = Math.sin(bearing);
   const c = Math.cos(bearing);

@@ -16,7 +16,7 @@ import {
   type WallDef,
 } from '../../game/house';
 import { FURNITURE, type MaterialKey, type Part } from '../../game/furnitureData';
-import { DOOR_HEIGHT, WALL_HEIGHT, WALL_THICKNESS } from '../../constants';
+import { DOOR_HEIGHT, SAFE_POS, WALL_HEIGHT, WALL_THICKNESS } from '../../constants';
 import { runtime } from '../../game/runtime';
 import { useGameStore } from '../../state/gameStore';
 import {
@@ -387,6 +387,50 @@ function Lights() {
   );
 }
 
+/** The code-locked safe in the storage room — holds the tranquilizer gun. */
+function Safe() {
+  const safeOpen = useGameStore((s) => s.safeOpen);
+  return (
+    <group position={[SAFE_POS[0], 0, SAFE_POS[2]]} rotation={[0, Math.PI, 0]}>
+      <RigidBody type="fixed" colliders={false}>
+        <CuboidCollider position={[0, 0.42, 0]} args={[0.3, 0.42, 0.28]} />
+      </RigidBody>
+      {/* body */}
+      <mesh position={[0, 0.42, 0]}>
+        <boxGeometry args={[0.6, 0.84, 0.56]} />
+        <meshStandardMaterial color="#2c3138" roughness={0.4} metalness={0.75} />
+      </mesh>
+      {/* door (swings open once cracked) */}
+      <group position={[-0.28, 0.42, -0.29]} rotation={[0, safeOpen ? -1.9 : 0, 0]}>
+        <mesh position={[0.27, 0, 0]}>
+          <boxGeometry args={[0.52, 0.76, 0.05]} />
+          <meshStandardMaterial color="#23272d" roughness={0.35} metalness={0.8} />
+        </mesh>
+        {/* keypad */}
+        <mesh position={[0.4, 0.12, -0.03]}>
+          <boxGeometry args={[0.14, 0.18, 0.02]} />
+          <meshStandardMaterial color="#11141a" roughness={0.3} />
+        </mesh>
+        {/* status light */}
+        <mesh position={[0.4, 0.26, -0.035]}>
+          <sphereGeometry args={[0.018, 8, 8]} />
+          <meshStandardMaterial
+            color={safeOpen ? '#37d67a' : '#d63737'}
+            emissive={safeOpen ? '#37d67a' : '#d63737'}
+            emissiveIntensity={1.6}
+          />
+        </mesh>
+        {/* handle */}
+        <mesh position={[0.46, -0.08, -0.04]} rotation={[Math.PI / 2, 0, 0]}>
+          <cylinderGeometry args={[0.02, 0.02, 0.12, 8]} />
+          <meshStandardMaterial color="#8a8576" metalness={0.85} roughness={0.25} />
+        </mesh>
+      </group>
+      <pointLight position={[0, 0.95, -0.3]} intensity={0.35} distance={1.6} color={safeOpen ? '#67e8a2' : '#e86767'} />
+    </group>
+  );
+}
+
 export default function House() {
   return (
     <group>
@@ -397,6 +441,7 @@ export default function House() {
       ))}
       <DoorBlockers />
       <Furniture />
+      <Safe />
       <WindowPane position={[14.98, 1.5, 11]} rotY={-Math.PI / 2} />
       <WindowPane position={[0.02, 1.5, 11]} rotY={Math.PI / 2} />
       <WindowPane position={[0.02, 1.6, 6.2]} rotY={Math.PI / 2} w={1.2} h={1.0} />

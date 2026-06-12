@@ -44,6 +44,10 @@ import {
   MOM_INVESTIGATE_SPEED,
   MOM_LIGHT_SLEEP_MAX,
   MOM_LIGHT_SLEEP_MIN,
+  MOM_STIR_WAKE_CHANCE,
+  MOM_FIRST_WAKE_DELAY,
+  MOM_PATROL_AGAIN_CHANCE,
+  TRANQ_DURATION,
   MOM_PATROL_SPEED,
   MOM_RETURN_SPEED,
   MOM_SEARCH_DURATION_MAX,
@@ -95,6 +99,7 @@ const HEARING_MUL: HearingMul = {
   search: 1.25,
   chase: 1.0,
   return: 0.9,
+  tranq: 0,
   finale: 1.0,
 };
 
@@ -108,9 +113,14 @@ export class MomAI {
   private strideAcc = 0;
   private pauseTimer = 0;
 
-  // sleep
-  private stirTimer = MOM_LIGHT_SLEEP_MIN + Math.random() * (MOM_LIGHT_SLEEP_MAX - MOM_LIGHT_SLEEP_MIN);
+  // sleep — first stir comes early and always wakes her (Granny pacing:
+  // the player should SEE her roam within the first half-minute).
+  private stirTimer = MOM_FIRST_WAKE_DELAY + Math.random() * 8;
+  private firstStir = true;
   private fakeSleepTimer = 0;
+
+  // tranquilizer
+  private tranqTimer = 0;
 
   // patrol
   private patrolQueue: string[] = [];
@@ -139,6 +149,7 @@ export class MomAI {
 
   // doors
   private doorWaitTimer = 0;
+  private waitingDoorId: string | null = null;
 
   // finale
   finaleStage: FinaleStage = 'none';
@@ -159,6 +170,23 @@ export class MomAI {
     this.hideUsage.set(spotId, (this.hideUsage.get(spotId) ?? 0) + 1);
   }
 
+  /** Tranquilizer dart hit — she collapses where she stands. */
+  tranquilize() {
+    if (runtime.momState === 'tranq') {
+      this.tranqTimer = TRANQ_DURATION; // second dart just resets the clock
+      return;
+    }
+    // cancel any finale scripting — a dart beats the script
+    if (runtime.momState === 'finale') {
+      this.finaleStage = 'none';
+      this.store.setFinale(false, 0);
+    }
+    this.tranqTimer = TRANQ_DURATION;
+    this.setState('tranq');
+    runtime.momDetection = 0;
+    this.store.notify('MOM IS OUT COLD. MOVE.');
+  }
+
   private get store() {
     return useGameStore.getState();
   }
@@ -170,7 +198,7 @@ export class MomAI {
     this.store.setMomState(s);
     const normal = this.store.difficulty === 'normal';
     if (normal) {
-      if ((prev === 'sleep' || prev === 'fakeSleep') && s !== 'sleep' && s !== 'fakeSleep') {
+      if ((prev === 'sleep' || prev === 'fakeSleep') && s !== 'sleep' && s !== 'fakeSleep' && s !== 'tranq') {
         this.store.notify('MOM IS AWAKE');
       }
       if (s === 'search') this.store.notify('MOM IS SEARCHING');
@@ -197,6 +225,7 @@ export class MomAI {
 
   private hear(e: NoiseEvent) {
     if (this.store.difficulty === 'easy') return;
+    if (runtime.momState === 'tranq') return; // out cold — hears nothing
     if (this.store.gamePhase !== 'playing' && this.store.gamePhase !== 'phone') return;
     const dx = e.x - runtime.momX;
     const dz = e.z - runtime.momZ;
@@ -369,11 +398,18 @@ export class MomAI {
     if (this.doorWaitTimer > 0) {
       this.doorWaitTimer -= dt;
       if (this.doorWaitTimer <= 0) {
-        runtime.doorLocked['d_bath'] = false;
-        runtime.doorOpen['d_bath'] = 1;
-        this.store.setBathroomLocked(false);
-        audioEngine.doorCreak(7.75, 4);
-        this.say('Open. The. Door.', 0.9);
+        const id = this.waitingDoorId ?? 'd_bath';
+        this.waitingDoorId = null;
+        runtime.doorLocked[id] = false;
+        runtime.doorOpen[id] = 1;
+        if (id === 'd_bath') {
+          this.store.setBathroomLocked(false);
+          audioEngine.doorCreak(7.75, 4);
+          this.say('Open. The. Door.', 0.9);
+        } else {
+          // her own key — the storage room is no obstacle for HER
+          audioEngine.doorCreak(5, 2);
+        }
       }
       return false;
     }
@@ -435,10 +471,17 @@ export class MomAI {
       if (d && d.kind === 'door') {
         const open = runtime.doorOpen[d.id] ?? (d.startsOpen ? 1 : 0);
         if (runtime.doorLocked[d.id]) {
-          // locked bathroom — buys the player time (GDD §6)
-          this.say('…why is this locked?', 0.7);
-          audioEngine.searchRustle(n.x, n.z, 1.2, 0.6);
-          this.doorWaitTimer = BATHROOM_LOCK_DELAY;
+          this.waitingDoorId = d.id;
+          if (d.id === 'd_bath') {
+            // locked bathroom — buys the player time (GDD §6)
+            this.say('…why is this locked?', 0.7);
+            audioEngine.searchRustle(n.x, n.z, 1.2, 0.6);
+            this.doorWaitTimer = BATHROOM_LOCK_DELAY;
+          } else {
+            // storage room: she carries her own key — short fumble only
+            audioEngine.searchRustle(n.x, n.z, 1.0, 0.3);
+            this.doorWaitTimer = 2.5;
+          }
           return;
         }
         if (open < 0.5) {
@@ -491,7 +534,7 @@ export class MomAI {
     if (store.gamePhase !== 'playing' && store.gamePhase !== 'phone') return;
 
     const st = runtime.momState;
-    const awake = st !== 'sleep' && st !== 'fakeSleep';
+    const awake = st !== 'sleep' && st !== 'fakeSleep' && st !== 'tranq';
     const seen = awake && st !== 'finale' ? this.canSeePlayer() : st === 'finale' ? this.canSeePlayer() : false;
 
     // continuous-LOS chase trigger (GDD §9)
@@ -527,11 +570,24 @@ export class MomAI {
         if (this.stirTimer <= 0) {
           this.stirTimer =
             MOM_LIGHT_SLEEP_MIN + Math.random() * (MOM_LIGHT_SLEEP_MAX - MOM_LIGHT_SLEEP_MIN);
-          // light-sleep event: she stirs; 25% of the time she gets up
+          // light-sleep event: she stirs — and usually gets up to roam
+          // (Granny pacing: the house should never feel safe for long).
           audioEngine.murmur(0.25);
-          if (Math.random() < 0.25) {
+          if (this.firstStir || Math.random() < MOM_STIR_WAKE_CHANCE) {
+            this.firstStir = false;
             this.wakeUp(null);
           }
+        }
+        break;
+      }
+      case 'tranq': {
+        this.tranqTimer -= dt;
+        runtime.momDetection = 0;
+        if (this.tranqTimer <= 0) {
+          // she comes to — furious — and tears the area apart
+          this.say('…what— WHO DID THAT?!', 1);
+          audioEngine.stinger();
+          this.startSearch([runtime.momX, runtime.momZ]);
         }
         break;
       }
@@ -546,6 +602,9 @@ export class MomAI {
         if (this.move(dt)) {
           if (this.patrolQueue.length > 0) {
             this.routeToNode(this.patrolQueue.shift()!);
+          } else if (Math.random() < MOM_PATROL_AGAIN_CHANCE) {
+            // not sleepy yet — another round through the house
+            this.startPatrol();
           } else {
             this.startReturn();
           }

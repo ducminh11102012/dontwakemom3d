@@ -7,6 +7,7 @@ import { DOORS, type DoorDef } from './house';
 import { runtime } from './runtime';
 import { HIDE_SPOTS, SEARCH_SPOTS, getSpot, type HideSpot, type SearchSpot } from './spots';
 import { useGameStore } from '../state/gameStore';
+import { SAFE_POS } from '../constants';
 
 export const FLASHLIGHT_POS: [number, number, number] = [10.6, 0.82, 9.62];
 
@@ -14,7 +15,8 @@ export type Interactable =
   | { type: 'search'; spot: SearchSpot; label: string }
   | { type: 'return'; spot: SearchSpot; label: string }
   | { type: 'hide'; spot: HideSpot; label: string }
-  | { type: 'door'; door: DoorDef; label: string; lockHint: boolean }
+  | { type: 'door'; door: DoorDef; label: string; lockHint: boolean; needsKey: boolean }
+  | { type: 'safe'; label: string }
   | { type: 'flashlight'; label: string };
 
 const REACH = 1.7;
@@ -52,6 +54,20 @@ export function findInteractable(yaw: number): Interactable | null {
     }
   }
 
+  // the safe in the storage room (holds the tranquilizer gun)
+  if (!store.safeOpen) {
+    const d = dist2(SAFE_POS[0], SAFE_POS[2]);
+    if (d < bestD && facing(SAFE_POS[0], SAFE_POS[2], yaw)) {
+      best = {
+        type: 'safe',
+        label: store.knowsCode
+          ? 'Open the safe (you know the code)'
+          : 'A code-locked safe… 4 digits',
+      };
+      bestD = d;
+    }
+  }
+
   // search spots / phone return
   for (const s of SEARCH_SPOTS) {
     const d = dist2(s.x, s.z);
@@ -83,11 +99,14 @@ export function findInteractable(yaw: number): Interactable | null {
     const open = runtime.doorOpen[door.id] ?? (door.startsOpen ? 1 : 0);
     const locked = runtime.doorLocked[door.id] ?? false;
     const insideBathroom = runtime.playerRoom === 'bathroom' && door.id === 'd_bath';
+    const needsKey = locked && door.id === 'd_storage' && !store.hasStorageKey;
     let label: string;
-    if (locked) label = 'Unlock the door';
+    if (needsKey) label = 'Locked. It needs a key…';
+    else if (locked)
+      label = door.id === 'd_storage' ? 'Unlock with the brass key' : 'Unlock the door';
     else label = open > 0.5 ? 'Close the door' : 'Open the door';
     if (door.creaks && open <= 0.5 && !locked) label += ' (it will creak)';
-    best = { type: 'door', door, label, lockHint: insideBathroom && open <= 0.5 };
+    best = { type: 'door', door, label, lockHint: insideBathroom && open <= 0.5, needsKey };
     bestD = d;
   }
 

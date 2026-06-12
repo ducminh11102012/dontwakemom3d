@@ -15,6 +15,7 @@ export type MomStateId =
   | 'search'
   | 'chase'
   | 'return'
+  | 'tranq'
   | 'finale';
 
 export interface NoiseEvent {

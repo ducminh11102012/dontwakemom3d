@@ -82,7 +82,7 @@ export interface DoorDef {
 }
 
 export const DOORS: DoorDef[] = [
-  { id: 'd_storage', axis: 'x', fixed: 5, at: 2, width: 1.1, kind: 'arch', rooms: ['storage', 'bathroom'] },
+  { id: 'd_storage', axis: 'x', fixed: 5, at: 2, width: 1.1, kind: 'door', startsOpen: false, lockable: true, rooms: ['storage', 'bathroom'] },
   { id: 'd_bath', axis: 'z', fixed: 4, at: 7.75, width: 1.0, kind: 'door', startsOpen: false, lockable: true, rooms: ['bathroom', 'hallway'] },
   { id: 'd_mom', axis: 'x', fixed: 5, at: 6.5, width: 1.1, kind: 'door', startsOpen: false, creaks: true, rooms: ['momRoom', 'hallway'] },
   { id: 'd_kitchen', axis: 'x', fixed: 10.5, at: 6.5, width: 1.3, kind: 'arch', rooms: ['hallway', 'kitchen'] },

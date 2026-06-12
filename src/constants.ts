@@ -95,8 +95,12 @@ export const MOM_SEARCH_DURATION_MIN = 20;
 export const MOM_SEARCH_DURATION_MAX = 40;
 export const MOM_CHASE_GIVE_UP = 15; // s after losing sight
 export const MOM_SIGHT_TO_CHASE = 0.5; // s of continuous LOS
-export const MOM_LIGHT_SLEEP_MIN = 45; // random stir window (GDD §9)
-export const MOM_LIGHT_SLEEP_MAX = 90;
+/** Granny-style pacing: she barely sleeps — gets up often and roams. */
+export const MOM_LIGHT_SLEEP_MIN = 14; // random stir window
+export const MOM_LIGHT_SLEEP_MAX = 32;
+export const MOM_STIR_WAKE_CHANCE = 0.65; // chance a stir becomes a patrol
+export const MOM_FIRST_WAKE_DELAY = 16; // s — first patrol is guaranteed early
+export const MOM_PATROL_AGAIN_CHANCE = 0.55; // keep roaming instead of bed
 export const MOM_FAKE_SLEEP_CHANCE = 0.2; // normal (hard: 0.35)
 export const MOM_FAKE_SLEEP_CHANCE_HARD = 0.35;
 export const MOM_FAKE_SLEEP_MAX = 30; // s motionless wait
@@ -104,7 +108,7 @@ export const MOM_DOORWAY_PAUSE_CHANCE = 0.35;
 export const MOM_DOORWAY_PAUSE_MIN = 5;
 export const MOM_DOORWAY_PAUSE_MAX = 10;
 /** Sleep wake thresholds (noise intensity reaching her, attenuated). */
-export const MOM_WAKE_THRESHOLD = 0.34;
+export const MOM_WAKE_THRESHOLD = 0.27;
 export const MOM_HEAR_BASE_RANGE = 11; // m, scaled by intensity & walls
 export const MOM_WALL_ATTENUATION = 0.45; // intensity multiplier per wall
 /** Vision cone (GDD §12). */
@@ -130,6 +134,18 @@ export const SEARCH_TIME_FACTOR = { easy: 0.5, normal: 1.0, hard: 1.6 } as const
 
 // ── Secret ending (under Mom's bed wait) ────────────────────────────────────
 export const SECRET_WAIT_SECONDS = 18; // she settles, then you crawl out
+
+// ── Granny-style loop: key, safe, tranq gun ─────────────────────────────────
+/** Safe (lockbox) in the storage room — holds the tranquilizer gun. */
+export const SAFE_POS: [number, number, number] = [4.5, 0.42, 0.62];
+export const TRANQ_RANGE = 12; // m
+export const TRANQ_AIM_DOT = 0.992; // cos(~7°) aim tolerance
+export const TRANQ_DURATION = 25; // s Mom stays knocked out
+export const SAFE_WRONG_CODE_NOISE = 0.45; // the safe beeps angrily
+
+// ── Caught jumpscare ─────────────────────────────────────────────────────────
+export const JUMPSCARE_FACE_SECONDS = 3.0; // mom face on black, then…
+export const JUMPSCARE_SCREAM_SECONDS = 5.5; // …scream in total darkness
 
 // ── Performance ─────────────────────────────────────────────────────────────
 export const TARGET_FPS = 60;

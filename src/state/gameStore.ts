@@ -5,9 +5,13 @@
 
 import { create } from 'zustand';
 import type { MomStateId } from '../game/runtime';
-import { rollPhoneSpot } from '../game/spots';
+import { rollItemSpots, rollPhoneSpot } from '../game/spots';
 import { runtime } from '../game/runtime';
 import { resetPlayerLook } from '../systems/playerLook';
+
+function rollSafeCode(): string {
+  return String(1000 + Math.floor(Math.random() * 9000));
+}
 
 export type GamePhase =
   | 'menu'
@@ -50,6 +54,18 @@ interface GameState {
   replySent: boolean;
   repliedText: string | null;
 
+  // Granny loop: key / safe / tranq gun
+  keySpotId: string;
+  noteSpotId: string;
+  dartSpotId: string;
+  safeCode: string;
+  knowsCode: boolean;
+  hasStorageKey: boolean;
+  safeOpen: boolean;
+  hasTranqGun: boolean;
+  darts: number;
+  keypadOpen: boolean;
+
   // mom (UI snapshot)
   momState: MomStateId;
   momAwakeEver: boolean;
@@ -86,6 +102,12 @@ interface GameState {
   setMomState: (s: MomStateId) => void;
   pickUpPhone: () => void;
   closePhone: (sent: boolean, text: string | null) => void;
+  findKey: () => void;
+  findNote: () => void;
+  findDart: () => void;
+  openSafe: () => void;
+  setKeypadOpen: (v: boolean) => void;
+  useDart: () => void;
   setPhoneReturned: (v: boolean) => void;
   setFinale: (active: boolean, timer: number) => void;
   setPanicTimer: (v: number | null) => void;
@@ -122,6 +144,17 @@ export const useGameStore = create<GameState>((set, get) => ({
   replySent: false,
   repliedText: null,
 
+  keySpotId: 'living_tv',
+  noteSpotId: 'bath_mirror',
+  dartSpotId: 'kitchen_drawer1',
+  safeCode: '1234',
+  knowsCode: false,
+  hasStorageKey: false,
+  safeOpen: false,
+  hasTranqGun: false,
+  darts: 0,
+  keypadOpen: false,
+
   momState: 'sleep',
   momAwakeEver: false,
 
@@ -145,6 +178,10 @@ export const useGameStore = create<GameState>((set, get) => ({
   startRun: () => {
     runtime.reset();
     resetPlayerLook();
+    // Granny loop: the storage room starts locked — find the brass key.
+    runtime.doorLocked['d_storage'] = true;
+    const phoneSpotId = rollPhoneSpot();
+    const itemSpots = rollItemSpots(phoneSpotId);
     return set((s) => ({
       runId: s.runId + 1,
       gamePhase: 'intro',
@@ -157,7 +194,15 @@ export const useGameStore = create<GameState>((set, get) => ({
       hasFlashlight: false,
       flashlightOn: false,
       stress: 0,
-      phoneSpotId: rollPhoneSpot(),
+      phoneSpotId,
+      ...itemSpots,
+      safeCode: rollSafeCode(),
+      knowsCode: false,
+      hasStorageKey: false,
+      safeOpen: false,
+      hasTranqGun: false,
+      darts: 0,
+      keypadOpen: false,
       hasPhone: false,
       phoneReturned: false,
       replySent: false,
@@ -213,6 +258,19 @@ export const useGameStore = create<GameState>((set, get) => ({
       });
     }
   },
+
+  findKey: () => set({ hasStorageKey: true }),
+  findNote: () => set({ knowsCode: true }),
+  findDart: () => set((s) => ({ darts: s.darts + 1 })),
+  openSafe: () =>
+    set((s) => ({
+      safeOpen: true,
+      hasTranqGun: true,
+      darts: s.darts + 1,
+      keypadOpen: false,
+    })),
+  setKeypadOpen: (keypadOpen) => set({ keypadOpen }),
+  useDart: () => set((s) => ({ darts: Math.max(0, s.darts - 1) })),
 
   setPhoneReturned: (phoneReturned) =>
     set((s) => ({
