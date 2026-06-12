@@ -18,6 +18,7 @@ export default function App() {
         key={runId}
         camera={{ fov: 75, near: 0.05, far: 60 }}
         gl={{ antialias: true }}
+        onCreated={({ gl }) => { gl.toneMappingExposure = 1.4; }}
         dpr={[1, 1.75]}
       >
         <Experience />

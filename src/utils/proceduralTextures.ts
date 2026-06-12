@@ -38,7 +38,7 @@ export function createCarpetTexture(): THREE.CanvasTexture {
   const c = cache.get('carpet');
   if (c) return c;
   const [canvas, ctx] = makeContext();
-  ctx.fillStyle = '#241a30';
+  ctx.fillStyle = '#4a3c5e';
   ctx.fillRect(0, 0, SIZE, SIZE);
   grain(ctx, 3500, 'rgba(70,56,92,0.5)', 'rgba(18,12,26,0.55)');
   ctx.strokeStyle = 'rgba(0,0,0,0.08)';
@@ -58,9 +58,9 @@ export function createTileTexture(): THREE.CanvasTexture {
   const c = cache.get('tile');
   if (c) return c;
   const [canvas, ctx] = makeContext();
-  ctx.fillStyle = '#1c2626';
+  ctx.fillStyle = '#405454';
   ctx.fillRect(0, 0, SIZE, SIZE);
-  ctx.strokeStyle = '#101717';
+  ctx.strokeStyle = '#243333';
   ctx.lineWidth = 3;
   for (let i = 0; i <= SIZE; i += 64) {
     ctx.beginPath();
@@ -90,12 +90,12 @@ export function createWoodTexture(): THREE.CanvasTexture {
   const c = cache.get('wood');
   if (c) return c;
   const [canvas, ctx] = makeContext();
-  ctx.fillStyle = '#2a1d12';
+  ctx.fillStyle = '#5c4128';
   ctx.fillRect(0, 0, SIZE, SIZE);
   const plankH = 32;
   for (let y = 0; y < SIZE; y += plankH) {
     const shade = 0.85 + Math.random() * 0.3;
-    ctx.fillStyle = `rgb(${Math.round(46 * shade)},${Math.round(32 * shade)},${Math.round(20 * shade)})`;
+    ctx.fillStyle = `rgb(${Math.round(98 * shade)},${Math.round(72 * shade)},${Math.round(46 * shade)})`;
     ctx.fillRect(0, y, SIZE, plankH - 2);
     // wood grain lines
     ctx.strokeStyle = 'rgba(20,12,6,0.35)';
@@ -108,7 +108,7 @@ export function createWoodTexture(): THREE.CanvasTexture {
       ctx.stroke();
     }
     // plank seam
-    ctx.fillStyle = 'rgba(0,0,0,0.55)';
+    ctx.fillStyle = 'rgba(0,0,0,0.35)';
     ctx.fillRect(0, y + plankH - 2, SIZE, 2);
     // butt joints
     const bx = Math.random() * SIZE;
@@ -124,7 +124,7 @@ export function createWallTexture(): THREE.CanvasTexture {
   const c = cache.get('wall');
   if (c) return c;
   const [canvas, ctx] = makeContext();
-  ctx.fillStyle = '#1c1c30';
+  ctx.fillStyle = '#3e4160';
   ctx.fillRect(0, 0, SIZE, SIZE);
   grain(ctx, 2200, 'rgba(255,255,255,0.025)', 'rgba(0,0,0,0.06)');
   // faint vertical wallpaper stripes
@@ -140,7 +140,7 @@ export function createCeilingTexture(): THREE.CanvasTexture {
   const c = cache.get('ceil');
   if (c) return c;
   const [canvas, ctx] = makeContext();
-  ctx.fillStyle = '#141420';
+  ctx.fillStyle = '#2e3048';
   ctx.fillRect(0, 0, SIZE, SIZE);
   grain(ctx, 1500, 'rgba(255,255,255,0.02)', 'rgba(0,0,0,0.05)');
   const tex = finalize(canvas, 2, 2);
