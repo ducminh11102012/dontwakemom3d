@@ -77,8 +77,6 @@ export const STRESS_DECAY_OWN_ROOM_PER_SEC = 12;
 export const HOLD_BREATH_RELIEF = 20;
 export const HOLD_BREATH_ACTIVATION = 2.0; // s to activate
 export const HOLD_BREATH_COOLDOWN = 15; // s
-/** Panic state (stress 100): seconds to hide before game over. */
-export const PANIC_WINDOW = 3.0;
 /** Distances (m) approximating "same room" / "within 3 rooms". */
 export const STRESS_NEAR_DISTANCE = 9;
 

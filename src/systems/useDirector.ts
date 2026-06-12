@@ -1,5 +1,5 @@
 /**
- * useDirector.ts — per-frame game director: stress system (GDD §5), panic,
+ * useDirector.ts — per-frame game director: stress system (GDD §5),
  * Act-3 phone buzz + finale, ending detection (GDD §16), audio orchestration.
  */
 
@@ -8,7 +8,6 @@ import { useFrame } from '@react-three/fiber';
 import {
   FINALE_COUNTDOWN,
   NOISE_PHONE_BUZZ,
-  PANIC_WINDOW,
   SECRET_WAIT_SECONDS,
   STRESS_DECAY_FAR_PER_SEC,
   STRESS_DECAY_HIDING_PER_SEC,
@@ -30,7 +29,7 @@ import { playerLook } from '../systems/playerLook';
 export function useDirector() {
   const stress = useRef(0);
   const lookCooldown = useRef(0);
-  const panic = useRef<number | null>(null);
+  const heartNoise = useRef(0);
   const buzzDelay = useRef<number | null>(null);
   const buzzed = useRef(false);
   const bedTimer = useRef(0);
@@ -92,20 +91,22 @@ export function useDirector() {
       }
       stress.current = Math.max(0, Math.min(100, stress.current + delta * dt));
 
-      // panic (stress 100 → 3 s to hide, GDD §5)
+      // stress 100 → no timer death (Granny-style). Your pounding heart and
+      // ragged breathing make NOISE — Mom physically walks over to check.
+      // She can only catch you by actually reaching you.
       if (
         stress.current >= 100 &&
         !runtime.playerHidden &&
         runtime.momState !== 'chase' &&
         store.gamePhase === 'playing'
       ) {
-        panic.current = (panic.current ?? PANIC_WINDOW) - dt;
-        if (panic.current <= 0) {
-          store.catchPlayer('Your nerves gave you away.');
-          panic.current = null;
+        heartNoise.current -= dt;
+        if (heartNoise.current <= 0) {
+          heartNoise.current = 3.5;
+          emitNoise(runtime.playerX, runtime.playerZ, 0.45, 'heartbeat');
         }
-      } else if (panic.current !== null) {
-        panic.current = null;
+      } else {
+        heartNoise.current = 0;
       }
     } else {
       stress.current = 0;
@@ -185,10 +186,6 @@ export function useDirector() {
       syncTimer.current = 0.1;
       const rounded = Math.round(stress.current);
       if (rounded !== store.stress) store.setStress(rounded);
-      const p = panic.current === null ? null : Math.max(0, panic.current);
-      if (p !== store.panicTimer && (p === null || Math.abs((store.panicTimer ?? -1) - p) > 0.05)) {
-        store.setPanicTimer(p);
-      }
     }
   });
 }

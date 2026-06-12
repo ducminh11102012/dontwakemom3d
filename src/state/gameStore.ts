@@ -75,8 +75,6 @@ interface GameState {
   finaleActive: boolean;
   finaleTimer: number;
 
-  // panic
-  panicTimer: number | null;
 
   // UI
   prompt: string | null;
@@ -111,7 +109,6 @@ interface GameState {
   useDart: () => void;
   setPhoneReturned: (v: boolean) => void;
   setFinale: (active: boolean, timer: number) => void;
-  setPanicTimer: (v: number | null) => void;
   setPrompt: (p: string | null) => void;
   setSearchProgress: (v: number | null) => void;
   setSubtitle: (s: string | null) => void;
@@ -163,7 +160,6 @@ export const useGameStore = create<GameState>((set, get) => ({
   finaleActive: false,
   finaleTimer: 0,
 
-  panicTimer: null,
 
   prompt: null,
   searchProgress: null,
@@ -214,8 +210,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       momAwakeEver: false,
       finaleActive: false,
       finaleTimer: 0,
-      panicTimer: null,
-      prompt: null,
+          prompt: null,
       searchProgress: null,
       subtitle: null,
       notifications: [],
@@ -285,7 +280,6 @@ export const useGameStore = create<GameState>((set, get) => ({
     })),
 
   setFinale: (finaleActive, finaleTimer) => set({ finaleActive, finaleTimer }),
-  setPanicTimer: (panicTimer) => set({ panicTimer }),
   setPrompt: (prompt) => {
     if (get().prompt !== prompt) set({ prompt });
   },

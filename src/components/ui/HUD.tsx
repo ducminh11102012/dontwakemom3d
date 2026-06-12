@@ -1,6 +1,6 @@
 /**
  * HUD.tsx — diegetic-light HUD per GDD §18: objective, context prompt,
- * notifications, subtitles, search progress, finale countdown, panic flash,
+ * notifications, subtitles, search progress, finale banner, panic flash,
  * stress vignette, crosshair, and the floor-plan map (difficulty-dependent).
  */
 
@@ -157,8 +157,6 @@ export default function HUD() {
   const subtitle = useGameStore((s) => s.subtitle);
   const searchProgress = useGameStore((s) => s.searchProgress);
   const finaleActive = useGameStore((s) => s.finaleActive);
-  const finaleTimer = useGameStore((s) => s.finaleTimer);
-  const panicTimer = useGameStore((s) => s.panicTimer);
   const stress = useGameStore((s) => s.stress);
   const difficulty = useGameStore((s) => s.difficulty);
   const hasFlashlight = useGameStore((s) => s.hasFlashlight);
@@ -200,17 +198,12 @@ export default function HUD() {
           ))}
         </div>
 
-        {finaleActive && finaleTimer > 0 && (
-          <div className="finale-banner">
-            PUT IT BACK. GET TO BED.
-            <span className="finale-count">{finaleTimer.toFixed(1)}</span>
-          </div>
+        {finaleActive && (
+          <div className="finale-banner">PUT IT BACK. GET TO BED.</div>
         )}
 
-        {panicTimer !== null && (
-          <div className="panic-banner">
-            HIDE. NOW. <span className="finale-count">{panicTimer.toFixed(1)}</span>
-          </div>
+        {stress >= 100 && (
+          <div className="panic-banner">your heart is pounding — she can hear it</div>
         )}
 
         <div className="crosshair" />

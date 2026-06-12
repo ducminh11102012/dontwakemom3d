@@ -72,7 +72,7 @@ export const SEARCH_SPOTS: SearchSpot[] = [
   { id: 'storage_basket2', label: 'Old crate', room: 'storage', x: 4.3, y: 0.5, z: 3.3, cls: 'box', tier: 0 },
   { id: 'storage_shelf', label: 'Shelf boxes', room: 'storage', x: 0.5, y: 1.3, z: 2.4, cls: 'cabinet', tier: 0 },
   // ── Player bedroom (fakes only — you'd remember) ──
-  { id: 'player_desk', label: 'Desk drawer', room: 'playerRoom', x: 10.6, y: 0.7, z: 9.6, cls: 'smallDrawer', tier: 0 },
+  { id: 'player_desk', label: 'Desk drawer', room: 'playerRoom', x: 12.85, y: 0.7, z: 12.05, cls: 'smallDrawer', tier: 0 },
 ];
 
 /** GDD §7 spawn tiers: 20% T1, 40% T2, 40% T3 — then uniform inside the tier. */
