@@ -20,7 +20,7 @@ import {
   TEST_ROOM_HEIGHT,
   TEST_ROOM_SIZE,
   TEST_ROOM_WALL_THICKNESS,
-} from '../constants';
+} from '../../constants';
 
 const S = TEST_ROOM_SIZE; // 6 — inner width/depth
 const H = TEST_ROOM_HEIGHT; // 2.7 — inner height

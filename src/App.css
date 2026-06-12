@@ -78,3 +78,22 @@
   0%, 100% { opacity: 0.45; }
   50% { opacity: 1; }
 }
+
+/* ── Non-Euclidean loop flash (Phase 2) ──────────────────────────────────── */
+
+.loop-flash {
+  position: fixed;
+  inset: 0;
+  background: #f4f2ec;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 10;
+  animation: loop-flash 250ms linear forwards;
+}
+
+/* Peak at 32% of 250 ms = 80 ms — the teleport happens exactly then. */
+@keyframes loop-flash {
+  0% { opacity: 0; }
+  32% { opacity: 0.9; }
+  100% { opacity: 0; }
+}

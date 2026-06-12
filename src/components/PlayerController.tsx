@@ -31,6 +31,7 @@ import { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { CapsuleCollider, RigidBody, type RapierRigidBody } from '@react-three/rapier';
 import {
+  CELL_SIZE,
   PLAYER_CAMERA_OFFSET,
   PLAYER_CAPSULE_HALF_HEIGHT,
   PLAYER_CAPSULE_HALF_TOTAL,
@@ -44,6 +45,7 @@ import {
   STAMINA_DRAIN_PER_SECOND,
   STAMINA_MAX,
   STAMINA_REGEN_PER_SECOND,
+  SPAWN_CELL,
   STAMINA_SPRINT_THRESHOLD,
 } from '../constants';
 import { useGameStore } from '../state/gameStore';
@@ -54,11 +56,11 @@ import { playerLook } from '../systems/playerLook';
 const STAND_EYE_HEIGHT = PLAYER_HEIGHT - PLAYER_CAMERA_OFFSET; // 1.55 m
 const CROUCH_EYE_HEIGHT = PLAYER_CROUCH_HEIGHT - PLAYER_CAMERA_OFFSET; // 0.85 m
 
-/** Spawn near the center of the test room (slightly off-center, facing in). */
+/** Phase 2: spawn at the center of cell [2][0] (cubicle bay), facing +X. */
 const SPAWN_POSITION: [number, number, number] = [
-  0.4,
+  SPAWN_CELL[1] * CELL_SIZE + CELL_SIZE / 2,
   PLAYER_CAPSULE_HALF_TOTAL + 0.05,
-  0.6,
+  SPAWN_CELL[0] * CELL_SIZE + CELL_SIZE / 2,
 ];
 
 export default function PlayerController() {
@@ -156,6 +158,7 @@ export default function PlayerController() {
     <RigidBody
       ref={bodyRef}
       colliders={false}
+      userData={{ isPlayer: true }}
       position={SPAWN_POSITION}
       enabledRotations={[false, false, false]} // never rotate the capsule
       linearDamping={0.5} // mild damping against residual sliding

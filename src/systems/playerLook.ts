@@ -9,14 +9,16 @@
  * must never trigger React re-renders.
  */
 
+import { SPAWN_YAW } from '../constants';
+
 export const playerLook = {
   /** Rotation around Y in radians. 0 = looking down -Z. */
-  yaw: 0,
+  yaw: SPAWN_YAW,
   /** Rotation around X in radians, clamped to ±PITCH_CLAMP. */
   pitch: 0,
 };
 
 export function resetPlayerLook() {
-  playerLook.yaw = 0;
+  playerLook.yaw = SPAWN_YAW;
   playerLook.pitch = 0;
 }

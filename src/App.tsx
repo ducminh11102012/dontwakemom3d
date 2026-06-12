@@ -19,6 +19,7 @@ import './App.css';
 
 export default function App() {
   const gamePhase = useGameStore((s) => s.gamePhase);
+  const loopFlashId = useGameStore((s) => s.loopFlashId);
   const showOverlay = gamePhase !== 'playing';
 
   return (
@@ -30,6 +31,9 @@ export default function App() {
       >
         <Experience />
       </Canvas>
+
+      {/* Non-Euclidean loop flash (Phase 2): keyed so each trigger replays. */}
+      {loopFlashId > 0 && <div key={loopFlashId} className="loop-flash" />}
 
       {showOverlay && (
         <div className="lock-overlay">

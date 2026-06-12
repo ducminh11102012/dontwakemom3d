@@ -64,6 +64,9 @@ export interface GameState {
   // The Tenant
   tenantState: TenantState;
 
+  // FX (Phase 2): increments each time the loop corridor flash fires.
+  loopFlashId: number;
+
   // Actions
   setGamePhase: (phase: GamePhase) => void;
   setDifficulty: (difficulty: Difficulty) => void;
@@ -72,6 +75,7 @@ export interface GameState {
   setIsCrouching: (isCrouching: boolean) => void;
   setIsSprinting: (isSprinting: boolean) => void;
   setTenantState: (state: TenantState) => void;
+  triggerLoopFlash: () => void;
   resetRun: () => void;
 }
 
@@ -95,6 +99,7 @@ const initialRunState = {
 export const useGameStore = create<GameState>()((set) => ({
   gamePhase: 'menu',
   difficulty: 'normal',
+  loopFlashId: 0,
   ...initialRunState,
 
   setGamePhase: (gamePhase) => set({ gamePhase }),
@@ -105,6 +110,7 @@ export const useGameStore = create<GameState>()((set) => ({
   setIsCrouching: (isCrouching) => set({ isCrouching }),
   setIsSprinting: (isSprinting) => set({ isSprinting }),
   setTenantState: (tenantState) => set({ tenantState }),
+  triggerLoopFlash: () => set((s) => ({ loopFlashId: s.loopFlashId + 1 })),
 
   /** Reset everything that belongs to a single run (used by restart flow). */
   resetRun: () => set({ ...initialRunState }),

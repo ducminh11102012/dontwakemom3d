@@ -10,7 +10,7 @@
 
 // ── Meta ────────────────────────────────────────────────────────────────────
 export const GAME_TITLE = 'THE NINTH FLOOR';
-export const GAME_VERSION = '0.1.0-phase1';
+export const GAME_VERSION = '0.2.0-phase2';
 
 // ── Player movement (Phase 1 final values) ──────────────────────────────────
 export const PLAYER_WALK_SPEED = 2.6; // m/s — slow, heavy office walk
@@ -48,6 +48,41 @@ export const PITCH_CLAMP = (85 * Math.PI) / 180; // ±85° pitch clamp
 export const TEST_ROOM_SIZE = 6; // m, inner floor is 6×6
 export const TEST_ROOM_HEIGHT = 2.7; // m, floor to ceiling
 export const TEST_ROOM_WALL_THICKNESS = 0.15; // m
+
+
+// ── Level system (Phase 2) ──────────────────────────────────────────────────
+export const CELL_SIZE = 8; // m per grid cell
+export const WALL_HEIGHT = 2.7; // m
+export const WALL_THICKNESS_LEVEL = 0.15; // m
+export const DOOR_WIDTH = 1.2; // m
+export const DOOR_HEIGHT = 2.2; // m
+export const CORRIDOR_WIDTH = 3; // m, inner hallway width
+
+export type RoomType =
+  | 'cubicle'
+  | 'hallway'
+  | 'breakroom'
+  | 'restroom'
+  | 'server'
+  | 'elevator'
+  | 'void';
+
+// ── Spawn (Phase 2: cell [2][0], facing East/+X) ────────────────────────────
+export const SPAWN_CELL: [row: number, col: number] = [2, 0];
+export const SPAWN_YAW = -Math.PI / 2; // yaw that points the camera down +X
+
+// ── Non-Euclidean loop (Phase 2 §2.6) — see PHASE_2_NOTES.md ────────────────
+/** East sensor inside loop-exit hallway [4][2] (world coords). */
+export const LOOP_SENSOR_EAST: [number, number, number] = [23.4, 1.35, 36];
+/** West sensor inside hallway [2][1] (world coords). */
+export const LOOP_SENSOR_WEST: [number, number, number] = [8.6, 1.35, 20];
+/** Landing X — just past (east of) the west sensor of [2][1]. */
+export const LOOP_TARGET_X = 9.2;
+/** Z shift: row 4 corridor center (36) → row 2 corridor center (20). */
+export const LOOP_DELTA_Z = -16;
+/** Flash timing (ms): teleport happens at the flash peak. */
+export const LOOP_FLASH_DURATION_MS = 250;
+export const LOOP_TELEPORT_AT_MS = 80;
 
 // ── Sanity system (PHASE_4_TODO: wired in Phase 4) ──────────────────────────
 export const SANITY_MAX = 100;
