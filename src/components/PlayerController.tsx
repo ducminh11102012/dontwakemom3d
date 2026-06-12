@@ -46,7 +46,7 @@ import {
   TRANQ_AIM_DOT,
   TRANQ_RANGE,
 } from '../constants';
-import { getRoom, roomAt } from '../game/house';
+import { getRoom, inStairRegion, LEVEL_Y, levelOfY, roomAt, stairHeightAt } from '../game/house';
 import { blockersBetween, emitNoise, runtime } from '../game/runtime';
 import { findInteractable, spotItem, FLASHLIGHT_POS } from '../game/interactions';
 import { getHideSpot, SEARCH_CLASS_DATA, getSpot } from '../game/spots';
@@ -236,9 +236,12 @@ export default function PlayerController() {
     // ── hidden mode ──────────────────────────────────────────────────────────
     if (runtime.playerHidden && store.hideSpotId) {
       const spot = getHideSpot(store.hideSpotId);
+      const spotFloorY = (spot.level ?? 0) * LEVEL_Y;
       camera.position.set(spot.cam[0], spot.cam[1], spot.cam[2]);
       runtime.playerX = spot.cam[0];
       runtime.playerZ = spot.cam[2];
+      runtime.playerY = spotFloorY;
+      runtime.playerLevel = spot.level ?? 0;
       runtime.playerRoom = spot.room;
       runtime.playerMoving = false;
       runtime.playerVelX = 0;
@@ -249,7 +252,7 @@ export default function PlayerController() {
         // exit
         if (input.interact && !prevInteract.current) {
           body.setTranslation(
-            { x: spot.exit[0], y: PLAYER_CAPSULE_HALF_TOTAL + 0.05, z: spot.exit[1] },
+            { x: spot.exit[0], y: spotFloorY + PLAYER_CAPSULE_HALF_TOTAL + 0.05, z: spot.exit[1] },
             true,
           );
           body.setEnabled(true);
@@ -368,14 +371,30 @@ export default function PlayerController() {
     }
     body.setLinvel({ x: vx, y: vel.y, z: vz }, true);
 
-    // ── footsteps + noise footprint (GDD §4/§12) ────────────────────────────
+    // ── stairs: kinematic ramp correction (GDD has no jump — we glue feet) ──
     const pos = body.translation();
+    {
+      const feet = pos.y - PLAYER_CAPSULE_HALF_TOTAL;
+      if (inStairRegion(pos.x, pos.z)) {
+        const ramp = stairHeightAt(pos.z);
+        // only when actually on the staircase (not under it / not on the slab strip)
+        if (Math.abs(feet - ramp) < 1.2) {
+          pos.y = ramp + PLAYER_CAPSULE_HALF_TOTAL + 0.02;
+          body.setTranslation({ x: pos.x, y: pos.y, z: pos.z }, true);
+          body.setLinvel({ x: vx, y: 0, z: vz }, true);
+        }
+      }
+    }
+
+    // ── footsteps + noise footprint (GDD §4/§12) ────────────────────────────
     const movedDist = Math.hypot(pos.x - runtime.playerX, pos.z - runtime.playerZ);
     runtime.playerVelX = vx;
     runtime.playerVelZ = vz;
     runtime.playerX = pos.x;
     runtime.playerZ = pos.z;
-    runtime.playerRoom = roomAt(pos.x, pos.z);
+    runtime.playerY = pos.y - PLAYER_CAPSULE_HALF_TOTAL;
+    runtime.playerLevel = levelOfY(runtime.playerY);
+    runtime.playerRoom = roomAt(pos.x, pos.z, runtime.playerLevel);
     runtime.playerMoving = isMoving;
     runtime.playerCrouching = crouching;
     runtime.playerSprinting = isSprinting;
@@ -414,14 +433,22 @@ export default function PlayerController() {
         camera.getWorldDirection(dir);
         const toMom = new THREE.Vector3(
           runtime.momX - camera.position.x,
-          1.1 - camera.position.y,
+          runtime.momY + 1.1 - camera.position.y,
           runtime.momZ - camera.position.z,
         );
         const dist = Math.hypot(toMom.x, toMom.z);
         toMom.normalize();
         const aimed = dir.dot(toMom) > (dist < 2.5 ? 0.9 : TRANQ_AIM_DOT);
         const clear =
-          blockersBetween(runtime.playerX, runtime.playerZ, runtime.momX, runtime.momZ) === 0;
+          Math.abs(runtime.momY - runtime.playerY) < 1.6 &&
+          blockersBetween(
+            runtime.playerX,
+            runtime.playerZ,
+            runtime.momX,
+            runtime.momZ,
+            runtime.playerLevel,
+            runtime.momLevel,
+          ) === 0;
         if (aimed && clear && dist <= TRANQ_RANGE) {
           momAIRef.current?.tranquilize();
         } else {
@@ -548,6 +575,9 @@ function peekHint(camYaw: number): string {
   if (st === 'sleep') return 'You hear soft, steady snoring in the distance.';
   if (st === 'fakeSleep') return 'Silence. Total silence. That can’t be good.';
   if (st === 'tranq') return 'Nothing. She’s still out cold. For now.';
+  const floorDiff = runtime.momY - runtime.playerY;
+  if (floorDiff > 1.5) return 'You hear floorboards creaking… upstairs. Right above you.';
+  if (floorDiff < -1.5) return 'You hear muffled footsteps on the floor below.';
   const bearing = Math.atan2(dx, -dz) - camYaw;
   const s = Math.sin(bearing);
   const c = Math.cos(bearing);

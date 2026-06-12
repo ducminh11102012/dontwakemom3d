@@ -83,7 +83,8 @@ export function useDirector() {
         if (
           Math.abs(da) < MOM_VISION_ANGLE / 2 &&
           Math.hypot(dx, dz) < 9 &&
-          hasLineOfSight(runtime.momX, runtime.momZ, runtime.playerX, runtime.playerZ)
+          Math.abs(runtime.momY - runtime.playerY) < 1.6 &&
+          hasLineOfSight(runtime.momX, runtime.momZ, runtime.playerX, runtime.playerZ, runtime.playerLevel)
         ) {
           stress.current = Math.min(100, stress.current + STRESS_MOM_LOOKS_INSTANT);
           lookCooldown.current = 6;

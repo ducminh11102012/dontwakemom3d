@@ -10,10 +10,13 @@
 import {
   DOORS,
   findPath,
+  LEVEL_Y,
+  levelOfY,
   navNode,
   nearestNode,
   roomAt,
   roomDistance,
+  type Level,
   type NavNode,
   type RoomId,
 } from './house';
@@ -110,6 +113,7 @@ export class MomAI {
   private path: NavNode[] = [];
   private pathIdx = 0;
   private finalTarget: [number, number] | null = null;
+  private finalTargetY = 0;
   private strideAcc = 0;
   private pauseTimer = 0;
 
@@ -138,6 +142,7 @@ export class MomAI {
   // chase
   private loseSightTimer = 0;
   private lastSeen: [number, number] = [0, 0];
+  private lastSeenLevel: Level = 0;
   private repathTimer = 0;
 
   // vision
@@ -158,6 +163,8 @@ export class MomAI {
   constructor() {
     runtime.momX = BED_POS[0];
     runtime.momZ = BED_POS[1];
+    runtime.momY = 0;
+    runtime.momLevel = 0;
     this.unsubscribe = onNoise((e) => this.hear(e));
   }
 
@@ -230,7 +237,7 @@ export class MomAI {
     const dx = e.x - runtime.momX;
     const dz = e.z - runtime.momZ;
     const dist = Math.hypot(dx, dz);
-    const walls = blockersBetween(runtime.momX, runtime.momZ, e.x, e.z);
+    const walls = blockersBetween(runtime.momX, runtime.momZ, e.x, e.z, runtime.momLevel, e.level);
     const wallMul = Math.pow(MOM_WALL_ATTENUATION, walls);
     const range = MOM_HEAR_BASE_RANGE * (0.5 + e.intensity) * (HEARING_MUL[runtime.momState] ?? 1);
     const falloff = Math.max(0, 1 - dist / Math.max(0.1, range));
@@ -239,31 +246,31 @@ export class MomAI {
 
     // memory (hard)
     if (this.store.difficulty === 'hard') {
-      const r = roomAt(e.x, e.z);
+      const r = roomAt(e.x, e.z, e.level);
       this.heardRooms.set(r, (this.heardRooms.get(r) ?? 0) + 1);
     }
 
     const st = runtime.momState;
     if (st === 'sleep') {
       if (loud > MOM_WAKE_THRESHOLD) {
-        this.wakeUp([e.x, e.z]);
+        this.wakeUp([e.x, e.z], e.level);
       }
     } else if (st === 'fakeSleep') {
       if (loud > 0.08) {
         // she rises silently — no notification sound change yet
-        this.startInvestigate([e.x, e.z], true);
+        this.startInvestigate([e.x, e.z], e.level, true);
       }
     } else if (st === 'patrol' || st === 'return') {
-      if (loud > 0.12) this.startInvestigate([e.x, e.z]);
+      if (loud > 0.12) this.startInvestigate([e.x, e.z], e.level);
     } else if (st === 'investigate') {
       if (loud > 0.1) {
         this.investigatePos = [e.x, e.z];
-        this.goTo(e.x, e.z);
+        this.goTo(e.x, e.z, e.level);
         this.examineTimer = 0;
       }
     } else if (st === 'search') {
       if (loud > 0.15) {
-        this.goTo(e.x, e.z);
+        this.goTo(e.x, e.z, e.level);
       }
     } else if (st === 'finale') {
       // during finale she is on rails, but a very loud noise pulls a glance
@@ -273,9 +280,9 @@ export class MomAI {
     }
   }
 
-  private wakeUp(noisePos: [number, number] | null) {
+  private wakeUp(noisePos: [number, number] | null, level: Level = 0) {
     audioEngine.setSnoring(false);
-    if (noisePos) this.startInvestigate(noisePos);
+    if (noisePos) this.startInvestigate(noisePos, level);
     else this.startPatrol();
   }
 
@@ -299,19 +306,19 @@ export class MomAI {
     this.routeToNode(this.patrolQueue.shift()!);
   }
 
-  private startInvestigate(pos: [number, number], silent = false) {
+  private startInvestigate(pos: [number, number], level: Level = 0, silent = false) {
     this.setState('investigate');
     if (!silent && Math.random() < 0.4) this.say('…hm?', 0.3);
     this.investigatePos = pos;
     this.examineTimer = 0;
-    this.goTo(pos[0], pos[1]);
+    this.goTo(pos[0], pos[1], level);
   }
 
-  private startSearch(origin: [number, number]) {
+  private startSearch(origin: [number, number], level: Level = runtime.momLevel) {
     this.setState('search');
     this.searchTimer =
       MOM_SEARCH_DURATION_MIN + Math.random() * (MOM_SEARCH_DURATION_MAX - MOM_SEARCH_DURATION_MIN);
-    const originRoom = roomAt(origin[0], origin[1]);
+    const originRoom = roomAt(origin[0], origin[1], level);
     const candidates = HIDE_SPOTS.filter(
       (h) => roomDistance(h.room, originRoom) <= 2 && h.id !== 'h_mom_bed_under',
     );
@@ -336,7 +343,7 @@ export class MomAI {
       return;
     }
     const h = getHideSpot(id);
-    this.goTo(h.check[0], h.check[1]);
+    this.goTo(h.check[0], h.check[1], h.level ?? 0);
     this.searchCheckTimer = 0;
   }
 
@@ -353,25 +360,28 @@ export class MomAI {
   private startReturn() {
     this.setState('return');
     if (Math.random() < 0.6) this.say(MUTTER_LINES[Math.floor(Math.random() * MUTTER_LINES.length)], 0.3);
-    this.goTo(BED_POS[0], BED_POS[1]);
+    this.goTo(BED_POS[0], BED_POS[1], 0);
   }
 
   // ── movement helpers ──────────────────────────────────────────────────────
 
   private routeToNode(nodeId: string) {
-    const from = nearestNode(runtime.momX, runtime.momZ);
+    const from = nearestNode(runtime.momX, runtime.momZ, runtime.momY);
     this.path = findPath(from.id, nodeId);
     this.pathIdx = 0;
     this.finalTarget = null;
+    this.finalTargetY = navNode(nodeId).y;
   }
 
-  private goTo(x: number, z: number) {
-    const from = nearestNode(runtime.momX, runtime.momZ);
-    const targetRoom = roomAt(x, z);
-    const to = nearestNode(x, z, targetRoom !== 'outside' ? targetRoom : undefined);
+  private goTo(x: number, z: number, level: Level = 0) {
+    const from = nearestNode(runtime.momX, runtime.momZ, runtime.momY);
+    const y = level * LEVEL_Y;
+    const targetRoom = roomAt(x, z, level);
+    const to = nearestNode(x, z, y, targetRoom !== 'outside' ? targetRoom : undefined);
     this.path = findPath(from.id, to.id);
     this.pathIdx = 0;
     this.finalTarget = [x, z];
+    this.finalTargetY = y;
   }
 
   private speed(): number {
@@ -414,14 +424,16 @@ export class MomAI {
       return false;
     }
 
-    let tx: number, tz: number;
+    let tx: number, tz: number, ty: number;
     if (this.pathIdx < this.path.length) {
       const n = this.path[this.pathIdx];
       tx = n.x;
       tz = n.z;
+      ty = n.y;
     } else if (this.finalTarget) {
       tx = this.finalTarget[0];
       tz = this.finalTarget[1];
+      ty = this.finalTargetY;
     } else {
       return true;
     }
@@ -432,6 +444,8 @@ export class MomAI {
     const sp = this.speed();
     if (dist < 0.12) {
       // node reached
+      runtime.momY = ty;
+      runtime.momLevel = levelOfY(ty);
       if (this.pathIdx < this.path.length) {
         const n = this.path[this.pathIdx];
         this.onNodeReached(n);
@@ -445,6 +459,11 @@ export class MomAI {
     const step = Math.min(dist, sp * dt);
     runtime.momX += (dx / dist) * step;
     runtime.momZ += (dz / dist) * step;
+    // climb/descend stairs in proportion to horizontal progress
+    if (Math.abs(ty - runtime.momY) > 0.001) {
+      runtime.momY += (ty - runtime.momY) * Math.min(1, step / Math.max(dist, 0.001));
+      runtime.momLevel = levelOfY(runtime.momY);
+    }
     const targetYaw = Math.atan2(dx, -dz);
     // smooth turn
     let dy = targetYaw - runtime.momYaw;
@@ -460,7 +479,7 @@ export class MomAI {
       const broom = runtime.momState === 'patrol' || runtime.momState === 'return';
       audioEngine.momStep(broom, runtime.momState === 'chase');
     }
-    runtime.momRoom = roomAt(runtime.momX, runtime.momZ);
+    runtime.momRoom = roomAt(runtime.momX, runtime.momZ, runtime.momLevel);
     return false;
   }
 
@@ -486,8 +505,8 @@ export class MomAI {
         }
         if (open < 0.5) {
           runtime.doorOpen[d.id] = 1;
-          audioEngine.doorCreak(n.x, n.z);
-          emitNoise(n.x, n.z, 0.2, 'momDoor');
+          audioEngine.doorCreak(n.x, n.z, d.level);
+          emitNoise(n.x, n.z, 0.2, 'momDoor', d.level);
         }
       }
       // doorway pause (GDD §9 patrol)
@@ -508,6 +527,8 @@ export class MomAI {
 
   private canSeePlayer(): boolean {
     if (runtime.playerHidden) return false;
+    // different floors: the slab blocks her view entirely (stairs overlap aside)
+    if (Math.abs(runtime.momY - runtime.playerY) > 1.6) return false;
     const dx = runtime.playerX - runtime.momX;
     const dz = runtime.playerZ - runtime.momZ;
     const dist = Math.hypot(dx, dz);
@@ -519,7 +540,16 @@ export class MomAI {
     while (da > Math.PI) da -= Math.PI * 2;
     while (da < -Math.PI) da += Math.PI * 2;
     if (Math.abs(da) > MOM_VISION_ANGLE / 2 && dist > 1.0) return false;
-    return blockersBetween(runtime.momX, runtime.momZ, runtime.playerX, runtime.playerZ) === 0;
+    return (
+      blockersBetween(
+        runtime.momX,
+        runtime.momZ,
+        runtime.playerX,
+        runtime.playerZ,
+        runtime.playerLevel,
+        runtime.playerLevel,
+      ) === 0
+    );
   }
 
   // ── main update ───────────────────────────────────────────────────────────
@@ -587,7 +617,7 @@ export class MomAI {
           // she comes to — furious — and tears the area apart
           this.say('…what— WHO DID THAT?!', 1);
           audioEngine.stinger();
-          this.startSearch([runtime.momX, runtime.momZ]);
+          this.startSearch([runtime.momX, runtime.momZ], runtime.momLevel);
         }
         break;
       }
@@ -625,6 +655,7 @@ export class MomAI {
           if (this.investigatePos) {
             for (const id of runtime.openedSpots) {
               const s = getSpot(id);
+              if ((s.level ?? 0) !== runtime.momLevel) continue;
               const d = Math.hypot(s.x - runtime.momX, s.z - runtime.momZ);
               if (d < 2.0) {
                 this.say('…this was closed.', 0.7);
@@ -670,6 +701,7 @@ export class MomAI {
         if (seen) {
           this.loseSightTimer = 0;
           this.lastSeen = [runtime.playerX, runtime.playerZ];
+          this.lastSeenLevel = runtime.playerLevel;
         } else {
           this.loseSightTimer += dt;
         }
@@ -679,11 +711,11 @@ export class MomAI {
         }
         if (runtime.playerHidden && this.loseSightTimer > 2.5) {
           // lost them while they slipped into a hiding spot → SEARCH
-          this.startSearch(this.lastSeen);
+          this.startSearch(this.lastSeen, this.lastSeenLevel);
           break;
         }
         if (this.loseSightTimer > MOM_CHASE_GIVE_UP) {
-          this.startSearch(this.lastSeen);
+          this.startSearch(this.lastSeen, this.lastSeenLevel);
           break;
         }
         // anticipate (GDD: she does not follow your exact path)
@@ -693,12 +725,17 @@ export class MomAI {
           const lead = seen ? 0.55 : 0;
           const tx = (seen ? runtime.playerX : this.lastSeen[0]) + runtime.playerVelX * lead;
           const tz = (seen ? runtime.playerZ : this.lastSeen[1]) + runtime.playerVelZ * lead;
-          if (seen && dist < 3 && blockersBetween(runtime.momX, runtime.momZ, tx, tz) === 0) {
+          if (
+            seen &&
+            dist < 3 &&
+            blockersBetween(runtime.momX, runtime.momZ, tx, tz, runtime.momLevel, runtime.playerLevel) === 0
+          ) {
             this.path = [];
             this.pathIdx = 0;
             this.finalTarget = [runtime.playerX, runtime.playerZ];
+            this.finalTargetY = runtime.playerLevel * LEVEL_Y;
           } else {
-            this.goTo(tx, tz);
+            this.goTo(tx, tz, seen ? runtime.playerLevel : this.lastSeenLevel);
           }
         }
         this.move(dt);
@@ -711,6 +748,8 @@ export class MomAI {
             store.difficulty === 'hard' ? MOM_FAKE_SLEEP_CHANCE_HARD : MOM_FAKE_SLEEP_CHANCE;
           runtime.momX = BED_POS[0];
           runtime.momZ = BED_POS[1];
+          runtime.momY = 0;
+          runtime.momLevel = 0;
           if (Math.random() < fakeChance) {
             this.setState('fakeSleep');
             this.fakeSleepTimer = 8 + Math.random() * (MOM_FAKE_SLEEP_MAX - 8);
@@ -732,6 +771,7 @@ export class MomAI {
     let best: string | null = null;
     let bestD = Infinity;
     for (const h of HIDE_SPOTS) {
+      if ((h.level ?? 0) !== runtime.momLevel) continue;
       const d = Math.hypot(h.check[0] - runtime.momX, h.check[1] - runtime.momZ);
       if (d < bestD) {
         bestD = d;
@@ -759,7 +799,7 @@ export class MomAI {
         this.finaleTimer -= dt;
         if (this.finaleTimer <= 0) {
           this.finaleStage = 'toPhone';
-          this.goTo(phoneSpot.x, phoneSpot.z);
+          this.goTo(phoneSpot.x, phoneSpot.z, phoneSpot.level ?? 0);
           runtime.doorOpen['d_mom'] = 1; // she throws her door open
           audioEngine.doorCreak(5, 6.5);
           this.say('I know you’re up!', 1);
@@ -787,7 +827,7 @@ export class MomAI {
             this.say('Where is it?!', 1);
             this.setState('search');
             this.searchTimer = MOM_SEARCH_DURATION_MAX;
-            this.startSearch([phoneSpot.x, phoneSpot.z]);
+            this.startSearch([phoneSpot.x, phoneSpot.z], phoneSpot.level ?? 0);
             this.store.setFinale(false, 0);
           }
         }
@@ -798,7 +838,7 @@ export class MomAI {
         if (this.finaleTimer <= 0) {
           this.finaleStage = 'toPlayerRoom';
           this.store.setFinale(false, 0);
-          this.goTo(11.2, 10.2); // just inside the kid's room
+          this.goTo(11.2, 10.2, 0); // just inside the kid's room
         }
         break;
       }
@@ -816,7 +856,7 @@ export class MomAI {
         runtime.momYaw += (targetYaw - runtime.momYaw) * Math.min(1, 5 * dt);
         if (this.finaleTimer <= 0) {
           this.finaleStage = 'toBed';
-          this.goTo(BED_POS[0], BED_POS[1]);
+          this.goTo(BED_POS[0], BED_POS[1], 0);
         }
         break;
       }
@@ -825,6 +865,8 @@ export class MomAI {
           this.finaleStage = 'done';
           runtime.momX = BED_POS[0];
           runtime.momZ = BED_POS[1];
+          runtime.momY = 0;
+          runtime.momLevel = 0;
           this.setState('sleep');
           audioEngine.setMusicLevel(0);
         }

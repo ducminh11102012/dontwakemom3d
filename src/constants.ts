@@ -6,7 +6,7 @@
 
 // ── Meta ────────────────────────────────────────────────────────────────────
 export const GAME_TITLE = "DON'T WAKE MOM";
-export const GAME_VERSION = '1.0.0';
+export const GAME_VERSION = '1.4.0';
 
 // ── Player movement (GDD §4: walk 100 / crouch 60 / run 180) ───────────────
 export const PLAYER_WALK_SPEED = 2.2; // m/s

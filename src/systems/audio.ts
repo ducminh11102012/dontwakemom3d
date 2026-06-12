@@ -207,23 +207,24 @@ class AudioEngine {
 
   // ── spatialization ────────────────────────────────────────────────────────
 
-  private spatial(x: number, z: number) {
+  private spatial(x: number, z: number, srcLevel?: 0 | 1) {
     const dx = x - this.listener.x;
     const dz = z - this.listener.z;
     const dist = Math.hypot(dx, dz);
     const angle = Math.atan2(dx, -dz) - this.listener.yaw; // relative bearing
     const pan = Math.max(-1, Math.min(1, Math.sin(angle)));
-    const walls = blockersBetween(this.listener.x, this.listener.z, x, z);
+    const lvl: 0 | 1 = this.listener.y > 2.5 ? 1 : 0;
+    const walls = blockersBetween(this.listener.x, this.listener.z, x, z, lvl, srcLevel ?? lvl);
     const wallMul = Math.pow(0.55, walls);
     const gain = Math.max(0, 1 - dist / MAX_DIST) ** 1.6 * wallMul;
     const filterFreq = walls === 0 ? 16000 : walls === 1 ? 2400 : walls === 2 ? 1000 : 550;
     return { pan, gain, filterFreq, dist, walls };
   }
 
-  private chainPositional(x: number, z: number, baseGain: number) {
+  private chainPositional(x: number, z: number, baseGain: number, srcLevel?: 0 | 1) {
     if (!this.ctx) return null;
     const ctx = this.ctx;
-    const s = this.spatial(x, z);
+    const s = this.spatial(x, z, srcLevel);
     const gain = ctx.createGain();
     gain.gain.value = baseGain * s.gain;
     const pan = ctx.createStereoPanner();
@@ -486,7 +487,7 @@ class AudioEngine {
   /** mom footstep / broom tap at her position */
   momStep(withBroomTap: boolean, hurried: boolean) {
     if (!this.ctx || !this.started) return;
-    const chain = this.chainPositional(runtime.momX, runtime.momZ, 1);
+    const chain = this.chainPositional(runtime.momX, runtime.momZ, 1, runtime.momLevel);
     if (!chain) return;
     const ctx = this.ctx;
     const src = ctx.createBufferSource();
@@ -524,9 +525,9 @@ class AudioEngine {
     o.stop(t + 0.15);
   }
 
-  doorCreak(x: number, z: number) {
+  doorCreak(x: number, z: number, level?: 0 | 1) {
     if (!this.ctx || !this.started) return;
-    const chain = this.chainPositional(x, z, 1);
+    const chain = this.chainPositional(x, z, 1, level);
     if (!chain) return;
     const ctx = this.ctx;
     const t = ctx.currentTime;

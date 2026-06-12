@@ -83,9 +83,10 @@ export function findInteractable(yaw: number): Interactable | null {
 
   let best: Interactable | null = null;
   let bestD = REACH * REACH;
+  const lvl = runtime.playerLevel;
 
-  // flashlight pickup
-  if (!store.hasFlashlight) {
+  // flashlight pickup (downstairs)
+  if (!store.hasFlashlight && lvl === 0) {
     const d = dist2(FLASHLIGHT_POS[0], FLASHLIGHT_POS[2]);
     if (d < bestD && facing(FLASHLIGHT_POS[0], FLASHLIGHT_POS[2], yaw)) {
       best = { type: 'flashlight', label: 'Take the flashlight' };
@@ -94,7 +95,7 @@ export function findInteractable(yaw: number): Interactable | null {
   }
 
   // the safe in the storage room (holds the tranquilizer gun)
-  if (!store.safeOpen) {
+  if (!store.safeOpen && lvl === 0) {
     const d = dist2(SAFE_POS[0], SAFE_POS[2]);
     if (d < bestD && facing(SAFE_POS[0], SAFE_POS[2], yaw)) {
       best = {
@@ -109,6 +110,7 @@ export function findInteractable(yaw: number): Interactable | null {
 
   // search spots / phone return
   for (const s of SEARCH_SPOTS) {
+    if ((s.level ?? 0) !== lvl) continue;
     const d = dist2(s.x, s.z);
     if (d >= bestD || !facing(s.x, s.z, yaw)) continue;
     if (store.hasPhone && s.id === store.phoneSpotId) {
@@ -128,6 +130,7 @@ export function findInteractable(yaw: number): Interactable | null {
 
   // hide spots
   for (const h of HIDE_SPOTS) {
+    if ((h.level ?? 0) !== lvl) continue;
     const d = dist2(h.x, h.z);
     if (d >= bestD || !facing(h.x, h.z, yaw)) continue;
     best = { type: 'hide', spot: h, label: h.label };
@@ -136,7 +139,7 @@ export function findInteractable(yaw: number): Interactable | null {
 
   // panel doors
   for (const door of DOORS) {
-    if (door.kind !== 'door') continue;
+    if (door.kind !== 'door' || door.level !== lvl) continue;
     const cx = door.axis === 'x' ? door.fixed : door.at;
     const cz = door.axis === 'x' ? door.at : door.fixed;
     const d = dist2(cx, cz);

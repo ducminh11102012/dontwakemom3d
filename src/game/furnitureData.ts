@@ -47,6 +47,9 @@ const leg = (x: number, z: number, h = 0.3, m: MaterialKey = 'woodDark'): Part =
   m,
 });
 
+/** lift a part to the upstairs floor (y += 2.85) */
+const up = (part: Part): Part => ({ ...part, p: [part.p[0], part.p[1] + 2.85, part.p[2]] });
+
 export const FURNITURE: FurnitureItem[] = [
   // ════ PLAYER BEDROOM (x 9–15, z 9–13) ════
   {
@@ -360,5 +363,236 @@ export const FURNITURE: FurnitureItem[] = [
       { p: [9.0, 1.75, 4.04], s: [0.5, 0.35, 0.04], m: 'screen' },
     ],
     colliders: [],
+  },
+
+  // ═══════════════════════════ UPSTAIRS (y + 2.85) ═══════════════════════════
+
+  // ════ GUEST BEDROOM (x 5–10.5, z 0–4.6) ════
+  {
+    id: 'guest_bed',
+    parts: [
+      up(leg(5.6, 0.6, 0.32)), up(leg(7.2, 0.6, 0.32)), up(leg(5.6, 2.6, 0.32)), up(leg(7.2, 2.6, 0.32)),
+      { p: [6.4, 3.23, 1.6], s: [1.9, 0.12, 2.1], m: 'wood' },
+      { p: [6.4, 3.38, 1.6], s: [1.8, 0.18, 2.0], m: 'fabricBlue' },
+      { p: [6.4, 3.51, 1.95], s: [1.75, 0.08, 1.25], m: 'sheet' }, // blanket
+      { p: [6.4, 3.7, 0.49], s: [1.9, 1.0, 0.08], m: 'wood' }, // headboard north
+    ],
+    colliders: [{ p: [6.4, 3.3, 1.6], s: [1.9, 0.9, 2.1] }],
+  },
+  {
+    id: 'guest_nightstand',
+    parts: [
+      { p: [7.9, 3.15, 0.75], s: [0.6, 0.6, 0.55], m: 'wood' },
+      { p: [7.9, 3.75, 0.75], s: [0.14, 0.26, 0.14], m: 'plastic', kind: 'cylinder' }, // dusty lamp
+    ],
+    colliders: [{ p: [7.9, 3.2, 0.75], s: [0.6, 0.7, 0.55] }],
+  },
+  {
+    id: 'guest_wardrobe',
+    parts: [
+      { p: [10.13, 3.85, 1.0], s: [0.65, 2.0, 1.15], m: 'wood' },
+      { p: [9.79, 3.9, 0.72], s: [0.04, 1.8, 0.5], m: 'woodDark' },
+      { p: [9.79, 3.9, 1.28], s: [0.04, 1.8, 0.5], m: 'woodDark' },
+      { p: [9.77, 3.9, 1.0], s: [0.03, 1.7, 0.03], m: 'metal' },
+    ],
+    colliders: [{ p: [10.13, 3.85, 1.0], s: [0.65, 2.0, 1.15] }],
+  },
+  {
+    id: 'guest_rug',
+    parts: [{ p: [6.4, 2.862, 3.3], s: [2.0, 0.02, 1.2], m: 'fabricWine' }],
+    colliders: [],
+  },
+
+  // ════ STUDY (x 0–5, z 0–4.6) ════
+  {
+    id: 'study_desk',
+    parts: [
+      { p: [2.4, 3.59, 0.65], s: [1.7, 0.06, 0.62], m: 'wood' },
+      up(leg(1.62, 0.32, 0.74)), up(leg(3.18, 0.32, 0.74)), up(leg(1.62, 0.92, 0.74)), up(leg(3.18, 0.92, 0.74)),
+      { p: [2.9, 3.4, 0.65], s: [0.55, 0.32, 0.56], m: 'woodDark' }, // drawer block
+      { p: [2.0, 3.73, 0.5], s: [0.4, 0.22, 0.3], m: 'cardboard' }, // dusty papers
+      { p: [1.7, 3.66, 0.85], s: [0.25, 0.08, 0.2], m: 'books1' },
+    ],
+    colliders: [{ p: [2.4, 3.3, 0.65], s: [1.7, 0.9, 0.66] }],
+  },
+  {
+    id: 'study_chair',
+    parts: [
+      { p: [2.4, 3.3, 1.5], s: [0.45, 0.06, 0.45], m: 'fabricWine' },
+      { p: [2.4, 3.07, 1.5], s: [0.07, 0.45, 0.07], m: 'metal', kind: 'cylinder' },
+      { p: [2.4, 3.6, 1.72], s: [0.45, 0.55, 0.07], m: 'fabricWine' },
+    ],
+    colliders: [{ p: [2.4, 3.35, 1.5], s: [0.5, 1.0, 0.5] }],
+  },
+  {
+    id: 'study_shelf',
+    parts: [
+      { p: [0.55, 3.8, 2.2], s: [0.8, 1.9, 1.7], m: 'wood', rotY: Math.PI / 2 },
+      { p: [0.55, 4.35, 1.9], s: [0.6, 0.35, 0.6], m: 'books2', rotY: Math.PI / 2 },
+      { p: [0.55, 4.35, 2.6], s: [0.6, 0.35, 0.55], m: 'books1', rotY: Math.PI / 2 },
+      { p: [0.55, 3.3, 2.3], s: [0.6, 0.35, 1.2], m: 'books1', rotY: Math.PI / 2 },
+    ],
+    colliders: [{ p: [0.5, 3.8, 2.2], s: [0.85, 1.9, 1.75] }],
+  },
+  {
+    id: 'study_cabinet',
+    parts: [
+      { p: [4.3, 3.45, 0.65], s: [0.55, 1.2, 0.55], m: 'metal' },
+      { p: [4.3, 3.75, 0.94], s: [0.45, 0.25, 0.03], m: 'black' },
+      { p: [4.3, 3.25, 0.94], s: [0.45, 0.25, 0.03], m: 'black' },
+    ],
+    colliders: [{ p: [4.3, 3.45, 0.65], s: [0.55, 1.2, 0.55] }],
+  },
+  {
+    id: 'study_rug',
+    parts: [{ p: [2.5, 2.862, 2.6], s: [2.4, 0.02, 1.6], m: 'fabricBlue' }],
+    colliders: [],
+  },
+
+  // ════ SEWING ROOM (x 10.5–15, z 0–4.6) ════
+  {
+    id: 'sewing_table',
+    parts: [
+      { p: [12.5, 3.59, 1.0], s: [1.6, 0.06, 0.72], m: 'wood' },
+      up(leg(11.78, 0.68, 0.74)), up(leg(13.22, 0.68, 0.74)), up(leg(11.78, 1.32, 0.74)), up(leg(13.22, 1.32, 0.74)),
+      // old sewing machine
+      { p: [12.5, 3.78, 0.95], s: [0.55, 0.3, 0.25], m: 'black' },
+      { p: [12.3, 3.95, 0.95], s: [0.12, 0.1, 0.2], m: 'black' },
+      { p: [12.5, 3.4, 1.35], s: [0.5, 0.3, 0.04], m: 'woodDark' }, // drawer front
+    ],
+    colliders: [{ p: [12.5, 3.3, 1.0], s: [1.6, 0.9, 0.75] }],
+  },
+  {
+    id: 'sewing_basket',
+    parts: [{ p: [14.3, 3.05, 0.8], s: [0.6, 0.4, 0.5], m: 'wood' }],
+    colliders: [{ p: [14.3, 3.05, 0.8], s: [0.6, 0.4, 0.5] }],
+  },
+  {
+    id: 'sewing_cabinet',
+    parts: [
+      { p: [14.62, 3.85, 3.4], s: [0.65, 2.0, 1.1], m: 'wood' },
+      { p: [14.28, 3.9, 3.13], s: [0.04, 1.8, 0.48], m: 'woodDark' },
+      { p: [14.28, 3.9, 3.67], s: [0.04, 1.8, 0.48], m: 'woodDark' },
+    ],
+    colliders: [{ p: [14.62, 3.85, 3.4], s: [0.65, 2.0, 1.1] }],
+  },
+  {
+    id: 'sewing_mannequin',
+    parts: [
+      { p: [11.2, 3.1, 3.7], s: [0.22, 0.5, 0.22], m: 'woodDark', kind: 'cylinder' }, // stand
+      { p: [11.2, 3.9, 3.7], s: [0.26, 0.85, 0.22], m: 'sheet', kind: 'cylinder' }, // torso
+      { p: [11.2, 4.45, 3.7], s: [0.06, 0.18, 0.06], m: 'woodDark', kind: 'cylinder' }, // neck
+    ],
+    colliders: [{ p: [11.2, 3.7, 3.7], s: [0.55, 1.7, 0.55] }],
+  },
+
+  // ════ UPSTAIRS HALLWAY (z 4.6–9) ════
+  {
+    id: 'up_hall_runner',
+    parts: [{ p: [7.0, 2.862, 6.8], s: [9.0, 0.02, 1.1], m: 'fabricWine' }],
+    colliders: [],
+  },
+  {
+    id: 'up_hall_console',
+    parts: [
+      { p: [4.9, 3.3, 8.62], s: [1.1, 0.9, 0.4], m: 'wood' },
+      { p: [4.9, 3.82, 8.62], s: [0.16, 0.24, 0.16], m: 'porcelain', kind: 'cylinder' }, // vase
+    ],
+    colliders: [{ p: [4.9, 3.3, 8.62], s: [1.1, 0.9, 0.4] }],
+  },
+  {
+    id: 'up_hall_frames',
+    parts: [
+      { p: [5.6, 4.55, 4.71], s: [0.5, 0.65, 0.04], m: 'woodDark' },
+      { p: [5.6, 4.55, 4.73], s: [0.4, 0.55, 0.04], m: 'screen' },
+      { p: [9.6, 4.6, 4.71], s: [0.65, 0.5, 0.04], m: 'woodDark' },
+      { p: [9.6, 4.6, 4.73], s: [0.55, 0.4, 0.04], m: 'screen' },
+    ],
+    colliders: [],
+  },
+
+  // ════ JUNK ROOM (x 0–7.5, z 9–13) ════
+  {
+    id: 'junk_boxes_s',
+    parts: [
+      { p: [1.0, 3.15, 12.3], s: [0.8, 0.6, 0.7], m: 'cardboard' },
+      { p: [2.4, 3.15, 12.4], s: [0.75, 0.6, 0.65], m: 'cardboard' },
+      { p: [2.3, 3.7, 12.45], s: [0.5, 0.45, 0.5], m: 'cardboard' },
+      { p: [6.8, 3.13, 12.5], s: [0.9, 0.55, 0.75], m: 'wood' }, // crate
+      { p: [5.6, 3.05, 12.55], s: [0.6, 0.4, 0.5], m: 'cardboard' },
+    ],
+    colliders: [
+      { p: [1.7, 3.3, 12.4], s: [2.3, 0.9, 0.75] },
+      { p: [6.2, 3.2, 12.5], s: [2.0, 0.7, 0.8] },
+    ],
+  },
+  {
+    id: 'junk_sheet_furniture',
+    parts: [
+      // furniture hidden under a dust sheet — you can crawl under it
+      { p: [1.0, 3.4, 10.3], s: [1.3, 1.1, 1.0], m: 'sheet' },
+      { p: [0.95, 4.0, 10.3], s: [0.7, 0.15, 0.8], m: 'sheet' },
+    ],
+    colliders: [{ p: [1.0, 3.4, 10.3], s: [1.3, 1.1, 1.0] }],
+  },
+  {
+    id: 'junk_clutter',
+    parts: [
+      { p: [4.2, 3.5, 9.6], s: [0.5, 1.3, 0.5], m: 'sheet' }, // covered lamp
+      { p: [3.0, 3.1, 9.8], s: [0.45, 0.5, 0.45], m: 'cardboard' },
+      { p: [5.9, 3.3, 9.7], s: [0.45, 0.9, 0.5], m: 'woodDark' }, // old chair stack
+      { p: [5.9, 3.85, 9.85], s: [0.45, 0.4, 0.07], m: 'woodDark' },
+      { p: [0.6, 3.05, 11.6], s: [0.3, 0.4, 0.3], m: 'plastic', kind: 'cylinder' }, // paint bucket
+    ],
+    colliders: [
+      { p: [4.2, 3.5, 9.6], s: [0.5, 1.3, 0.5] },
+      { p: [5.9, 3.4, 9.75], s: [0.5, 1.1, 0.6] },
+      { p: [3.0, 3.1, 9.8], s: [0.45, 0.5, 0.45] },
+    ],
+  },
+
+  // ════ LAUNDRY ROOM (x 7.5–15, z 9–13) ════
+  {
+    id: 'laundry_washer',
+    parts: [
+      { p: [8.2, 3.3, 12.45], s: [0.72, 0.9, 0.68], m: 'plastic' },
+      { p: [8.2, 3.35, 12.1], s: [0.34, 0.04, 0.34], m: 'mirror', kind: 'cylinder', rotY: 0 }, // porthole
+      { p: [8.2, 3.71, 12.3], s: [0.5, 0.06, 0.2], m: 'black' }, // control panel
+    ],
+    colliders: [{ p: [8.2, 3.3, 12.45], s: [0.72, 0.9, 0.68] }],
+  },
+  {
+    id: 'laundry_dryer',
+    parts: [
+      { p: [9.15, 3.3, 12.45], s: [0.72, 0.9, 0.68], m: 'porcelain' },
+      { p: [9.15, 3.35, 12.1], s: [0.3, 0.04, 0.3], m: 'black', kind: 'cylinder' },
+    ],
+    colliders: [{ p: [9.15, 3.3, 12.45], s: [0.72, 0.9, 0.68] }],
+  },
+  {
+    id: 'laundry_shelf_unit',
+    parts: [
+      { p: [14.65, 3.35, 11.5], s: [0.6, 0.04, 1.6], m: 'wood' },
+      { p: [14.65, 3.95, 11.5], s: [0.6, 0.04, 1.6], m: 'wood' },
+      { p: [14.65, 4.55, 11.5], s: [0.6, 0.04, 1.6], m: 'wood' },
+      { p: [14.65, 3.6, 11.1], s: [0.45, 0.35, 0.4], m: 'plastic' }, // detergent
+      { p: [14.65, 4.18, 11.9], s: [0.5, 0.35, 0.5], m: 'cardboard' },
+    ],
+    colliders: [{ p: [14.65, 3.85, 11.5], s: [0.7, 2.0, 1.65] }],
+  },
+  {
+    id: 'laundry_pile_visual',
+    parts: [
+      // mountain of unwashed clothes — big enough to burrow into
+      { p: [12.5, 3.05, 12.3], s: [1.7, 0.45, 1.3], m: 'fabricBlue' },
+      { p: [12.3, 3.3, 12.4], s: [1.1, 0.35, 0.9], m: 'fabricWine' },
+      { p: [12.8, 3.45, 12.2], s: [0.7, 0.3, 0.6], m: 'sheet' },
+    ],
+    colliders: [],
+  },
+  {
+    id: 'laundry_hamper',
+    parts: [{ p: [10.2, 3.15, 12.4], s: [0.3, 0.6, 0.28], m: 'plastic', kind: 'cylinder' }],
+    colliders: [{ p: [10.2, 3.15, 12.4], s: [0.6, 0.6, 0.6] }],
   },
 ];

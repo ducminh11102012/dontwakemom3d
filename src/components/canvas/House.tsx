@@ -10,7 +10,14 @@ import { useFrame } from '@react-three/fiber';
 import { CuboidCollider, RigidBody } from '@react-three/rapier';
 import {
   DOORS,
+  LEVEL_Y,
   ROOMS,
+  STAIR_HOLE_Z0,
+  STAIR_HOLE_Z1,
+  STAIR_X0,
+  STAIR_X1,
+  STAIR_Z_BOTTOM,
+  STAIR_Z_TOP,
   WALLS,
   type DoorDef,
   type WallDef,
@@ -75,6 +82,10 @@ interface WallPiece {
 
 function wallPieces(w: WallDef): WallPiece[] {
   const pieces: WallPiece[] = [];
+  // level 0: wall spans 0→2.6; level 1: spans 2.6→5.45 (covers the slab band)
+  const base = w.level === 0 ? 0 : WALL_HEIGHT;
+  const top = w.level === 0 ? WALL_HEIGHT : WALL_HEIGHT + LEVEL_Y;
+  const doorBase = w.level * LEVEL_Y; // door holes start at the walking floor
   const holes = w.doors
     .map((id) => DOORS.find((d) => d.id === id))
     .filter((d): d is DoorDef => !!d)
@@ -82,7 +93,7 @@ function wallPieces(w: WallDef): WallPiece[] {
     .sort((a, b) => a.a - b.a);
   let cursor = w.from;
   const push = (from: number, to: number, y: number, h: number) => {
-    if (to - from < 0.01) return;
+    if (to - from < 0.01 || h < 0.01) return;
     const mid = (from + to) / 2;
     pieces.push({
       cx: w.axis === 'x' ? w.fixed : mid,
@@ -94,12 +105,15 @@ function wallPieces(w: WallDef): WallPiece[] {
     });
   };
   for (const hole of holes) {
-    push(cursor, hole.a, WALL_HEIGHT / 2, WALL_HEIGHT);
+    push(cursor, hole.a, (base + top) / 2, top - base);
+    // sill below the door hole (level 1: the slab band)
+    push(hole.a, hole.b, (base + doorBase) / 2, doorBase - base);
     // lintel above the door
-    push(hole.a, hole.b, (WALL_HEIGHT + DOOR_HEIGHT) / 2, WALL_HEIGHT - DOOR_HEIGHT);
+    const lintelFrom = doorBase + DOOR_HEIGHT;
+    push(hole.a, hole.b, (lintelFrom + top) / 2, top - lintelFrom);
     cursor = hole.b;
   }
-  push(cursor, w.to, WALL_HEIGHT / 2, WALL_HEIGHT);
+  push(cursor, w.to, (base + top) / 2, top - base);
   return pieces;
 }
 
@@ -168,7 +182,7 @@ function DoorPanel({ door }: { door: DoorDef }) {
   const open = runtime.doorOpen[door.id] ?? (door.startsOpen ? 1 : 0);
 
   return (
-    <group position={[hinge[0], 0, hinge[1]]}>
+    <group position={[hinge[0], door.level * LEVEL_Y, hinge[1]]}>
       <group ref={pivot} rotation={[0, open > 0.5 ? Math.PI / 2 : 0, 0]}>
         <mesh
           position={
@@ -216,7 +230,7 @@ function DoorBlockers() {
         return (
           <RigidBody key={`${d.id}_${force}`} type="fixed" colliders={false}>
             <CuboidCollider
-              position={[cx, DOOR_HEIGHT / 2, cz]}
+              position={[cx, d.level * LEVEL_Y + DOOR_HEIGHT / 2, cz]}
               args={
                 d.axis === 'x'
                   ? [0.05, DOOR_HEIGHT / 2, d.width / 2]
@@ -257,26 +271,63 @@ function Floors() {
     () => new THREE.MeshStandardMaterial({ map: createCeilingTexture(), roughness: 1 }),
     [],
   );
+
+  // visual floor rectangles; upstairs rooms skip the stairwell hole
+  const floorRects: { x0: number; z0: number; x1: number; z1: number; y: number; floor: 'carpet' | 'tile' | 'wood' }[] = [];
+  for (const r of ROOMS) {
+    const y = r.level === 0 ? 0 : LEVEL_Y + 0.002;
+    if (r.id === 'upHall') {
+      // split around the stairwell hole (x 13.8–15, z 4.69–7.9)
+      floorRects.push({ x0: r.x0, z0: r.z0, x1: STAIR_X0, z1: r.z1, y, floor: r.floor });
+      floorRects.push({ x0: STAIR_X0, z0: STAIR_HOLE_Z1, x1: r.x1, z1: r.z1, y, floor: r.floor });
+      floorRects.push({ x0: STAIR_X0, z0: r.z0, x1: r.x1, z1: STAIR_HOLE_Z0, y, floor: r.floor });
+    } else {
+      floorRects.push({ x0: r.x0, z0: r.z0, x1: r.x1, z1: r.z1, y, floor: r.floor });
+    }
+  }
+
   return (
     <RigidBody type="fixed" colliders={false}>
-      {ROOMS.map((r) => {
-        const w = r.x1 - r.x0;
-        const d = r.z1 - r.z0;
-        return (
-          <mesh
-            key={r.id}
-            position={[(r.x0 + r.x1) / 2, 0, (r.z0 + r.z1) / 2]}
-            rotation={[-Math.PI / 2, 0, 0]}
-            material={mats[r.floor]}
-          >
-            <planeGeometry args={[w, d]} />
-          </mesh>
-        );
-      })}
+      {floorRects.map((r, i) => (
+        <mesh
+          key={i}
+          position={[(r.x0 + r.x1) / 2, r.y, (r.z0 + r.z1) / 2]}
+          rotation={[-Math.PI / 2, 0, 0]}
+          material={mats[r.floor]}
+        >
+          <planeGeometry args={[r.x1 - r.x0, r.z1 - r.z0]} />
+        </mesh>
+      ))}
+      {/* ground collider */}
       <CuboidCollider position={[7.5, -0.25, 6.5]} args={[8, 0.25, 7]} />
-      {/* ceiling */}
+      {/* upstairs slab colliders (leave the stairwell hole open) */}
+      <CuboidCollider position={[7.5, LEVEL_Y - 0.125, STAIR_HOLE_Z0 / 2]} args={[7.5, 0.125, STAIR_HOLE_Z0 / 2]} />
+      <CuboidCollider
+        position={[STAIR_X0 / 2, LEVEL_Y - 0.125, (STAIR_HOLE_Z0 + STAIR_HOLE_Z1) / 2]}
+        args={[STAIR_X0 / 2, 0.125, (STAIR_HOLE_Z1 - STAIR_HOLE_Z0) / 2]}
+      />
+      <CuboidCollider
+        position={[7.5, LEVEL_Y - 0.125, (STAIR_HOLE_Z1 + 13) / 2]}
+        args={[7.5, 0.125, (13 - STAIR_HOLE_Z1) / 2]}
+      />
+      {/* downstairs ceiling (underside of the slab), hole left open */}
+      {[
+        { x0: 0, z0: 0, x1: 15, z1: STAIR_HOLE_Z0 },
+        { x0: 0, z0: STAIR_HOLE_Z0, x1: STAIR_X0, z1: STAIR_HOLE_Z1 },
+        { x0: 0, z0: STAIR_HOLE_Z1, x1: 15, z1: 13 },
+      ].map((c, i) => (
+        <mesh
+          key={`c${i}`}
+          position={[(c.x0 + c.x1) / 2, WALL_HEIGHT - 0.001, (c.z0 + c.z1) / 2]}
+          rotation={[Math.PI / 2, 0, 0]}
+          material={ceilMat}
+        >
+          <planeGeometry args={[c.x1 - c.x0, c.z1 - c.z0]} />
+        </mesh>
+      ))}
+      {/* upstairs ceiling / roof */}
       <mesh
-        position={[7.5, WALL_HEIGHT, 6.5]}
+        position={[7.5, WALL_HEIGHT + LEVEL_Y, 6.5]}
         rotation={[Math.PI / 2, 0, 0]}
         material={ceilMat}
       >
@@ -286,7 +337,107 @@ function Floors() {
   );
 }
 
-// ── furniture ───────────────────────────────────────────────────────────────
+// ── staircase ───────────────────────────────────────────────────────────────
+
+function Stairs() {
+  const wood = useMemo(() => createWoodTexture(), []);
+  const stepMat = useMemo(() => new THREE.MeshStandardMaterial({ map: wood, roughness: 0.75 }), [wood]);
+  const darkMat = useMemo(() => new THREE.MeshStandardMaterial({ color: '#2e2218', roughness: 0.85 }), []);
+
+  const run = STAIR_Z_BOTTOM - STAIR_Z_TOP; // 3.6 — stairs descend toward +z
+  const STEPS = 14;
+  const rise = LEVEL_Y / STEPS;
+  const depth = run / STEPS;
+  const width = STAIR_X1 - STAIR_X0;
+  const cx = (STAIR_X0 + STAIR_X1) / 2;
+
+  const steps = [];
+  for (let i = 0; i < STEPS; i++) {
+    // step i: top surface at (i+1)*rise, front at z = STAIR_Z_BOTTOM - i*depth
+    const z = STAIR_Z_BOTTOM - (i + 0.5) * depth;
+    const topY = (i + 1) * rise;
+    steps.push({ z, y: topY - 0.04, h: 0.08 });
+  }
+
+  // under-stair stringer colliders (walkable ramp handled by PlayerController)
+  const stringers = [
+    { z0: 5.0, z1: 5.9, top: 2.02 },
+    { z0: 5.9, z1: 6.8, top: 1.3 },
+    { z0: 6.8, z1: 7.7, top: 0.59 },
+  ];
+
+  return (
+    <group>
+      {steps.map((st, i) => (
+        <mesh key={i} position={[cx, st.y, st.z]} material={stepMat}>
+          <boxGeometry args={[width, st.h, depth]} />
+        </mesh>
+      ))}
+      {/* closed riser skirt under the steps */}
+      <mesh
+        position={[cx, LEVEL_Y / 2 - 0.3, (STAIR_Z_TOP + STAIR_Z_BOTTOM) / 2]}
+        rotation={[Math.atan2(LEVEL_Y, run), 0, 0]}
+        material={darkMat}
+      >
+        <boxGeometry args={[width, 0.12, Math.hypot(run, LEVEL_Y)]} />
+      </mesh>
+      {/* banister along the open (west) side of the stairs */}
+      <mesh
+        position={[STAIR_X0 + 0.04, LEVEL_Y / 2 + 0.62, (STAIR_Z_TOP + STAIR_Z_BOTTOM) / 2]}
+        rotation={[Math.atan2(LEVEL_Y, run), 0, 0]}
+        material={darkMat}
+      >
+        <boxGeometry args={[0.07, 0.1, Math.hypot(run, LEVEL_Y) + 0.4]} />
+      </mesh>
+      <RigidBody type="fixed" colliders={false}>
+        {stringers.map((st, i) => (
+          <CuboidCollider
+            key={i}
+            position={[cx, st.top / 2, (st.z0 + st.z1) / 2]}
+            args={[width / 2, st.top / 2, (st.z1 - st.z0) / 2]}
+          />
+        ))}
+        {/* banister collider keeps the player from strafing off the open side */}
+        <CuboidCollider
+          position={[STAIR_X0 + 0.04, LEVEL_Y / 2 + 0.5, (STAIR_Z_TOP + STAIR_Z_BOTTOM) / 2]}
+          args={[0.05, LEVEL_Y / 2 + 0.7, run / 2 + 0.2]}
+        />
+      </RigidBody>
+    </group>
+  );
+}
+
+/** safety railings around the upstairs stairwell opening */
+function Railings() {
+  const mat = useMemo(() => new THREE.MeshStandardMaterial({ color: '#2e2218', roughness: 0.85 }), []);
+  const rails: { p: [number, number, number]; s: [number, number, number] }[] = [
+    // west edge of the hole (gap at z 4.69–5.7 = stair exit)
+    { p: [STAIR_X0, LEVEL_Y + 0.45, (5.7 + STAIR_HOLE_Z1) / 2], s: [0.08, 0.9, STAIR_HOLE_Z1 - 5.7] },
+    // south edge of the hole
+    { p: [(STAIR_X0 + STAIR_X1) / 2, LEVEL_Y + 0.45, STAIR_HOLE_Z1], s: [STAIR_X1 - STAIR_X0, 0.9, 0.08] },
+  ];
+  return (
+    <group>
+      {rails.map((r, i) => (
+        <group key={i}>
+          {/* top rail */}
+          <mesh position={[r.p[0], LEVEL_Y + 0.88, r.p[2]]} material={mat}>
+            <boxGeometry args={[Math.max(r.s[0], 0.1), 0.08, Math.max(r.s[2], 0.1)]} />
+          </mesh>
+          {/* balusters as a thin panel */}
+          <mesh position={r.p} material={mat}>
+            <boxGeometry args={r.s} />
+          </mesh>
+          <RigidBody type="fixed" colliders={false}>
+            <CuboidCollider position={[r.p[0], LEVEL_Y + 0.5, r.p[2]]} args={[Math.max(r.s[0] / 2, 0.04), 0.5, Math.max(r.s[2] / 2, 0.04)]} />
+          </RigidBody>
+        </group>
+      ))}
+    </group>
+  );
+}
+
+// ── furniture // ── furniture ───────────────────────────────────────────────────────────────
 
 function PartMesh({ part, mats }: { part: Part; mats: Record<MaterialKey, THREE.Material> }) {
   if (part.kind === 'cylinder') {
@@ -384,6 +535,12 @@ function Lights() {
       <pointLight position={[7.75, 2.3, 2]} intensity={2.8} distance={5} color="#48505e" />
       {/* fridge seam glow */}
       <pointLight position={[14.1, 0.9, 1.4]} intensity={1.2} distance={2.4} color="#aac6e8" />
+      {/* upstairs practicals (study / sewing / junk stay dark) */}
+      <pointLight position={[7.75, 5.15, 2.3]} intensity={3.6} distance={6.5} color="#564f6a" />
+      <pointLight position={[7.5, 5.15, 6.8]} intensity={4.6} distance={9} color="#5d5a78" />
+      <pointLight position={[11.2, 5.15, 11]} intensity={3.4} distance={6} color="#4f5a6e" />
+      {/* stairwell glow */}
+      <pointLight position={[14.4, 3.4, 6.8]} intensity={2.6} distance={5} color="#5a6890" />
     </>
   );
 }
@@ -444,9 +601,15 @@ export default function House() {
       <Furniture />
       <Containers />
       <Safe />
+      <Stairs />
+      <Railings />
       <WindowPane position={[14.98, 1.5, 11]} rotY={-Math.PI / 2} />
       <WindowPane position={[0.02, 1.5, 11]} rotY={Math.PI / 2} />
       <WindowPane position={[0.02, 1.6, 6.2]} rotY={Math.PI / 2} w={1.2} h={1.0} />
+      {/* upstairs windows */}
+      <WindowPane position={[7.75, 4.35, 0.06]} rotY={0} />
+      <WindowPane position={[0.02, 4.35, 11]} rotY={Math.PI / 2} />
+      <WindowPane position={[14.98, 4.35, 11]} rotY={-Math.PI / 2} w={1.2} h={1.0} />
       <Lights />
     </group>
   );

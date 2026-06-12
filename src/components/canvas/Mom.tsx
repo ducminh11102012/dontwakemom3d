@@ -60,12 +60,12 @@ export default function Mom() {
       g.rotation.set(-Math.PI / 2, 0, 0);
     } else if (runtime.momState === 'tranq') {
       // knocked out cold, face down where the dart hit her
-      g.position.set(runtime.momX, 0.18, runtime.momZ);
+      g.position.set(runtime.momX, runtime.momY + 0.18, runtime.momZ);
       g.rotation.set(Math.PI / 2, 0, runtime.momYaw + Math.PI);
     } else {
       walkPhase.current += dt * 7;
       const bob = Math.sin(walkPhase.current) * 0.02;
-      g.position.set(runtime.momX, bob, runtime.momZ);
+      g.position.set(runtime.momX, runtime.momY + bob, runtime.momZ);
       g.rotation.set(0, runtime.momYaw + Math.PI, 0);
     }
   });

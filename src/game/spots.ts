@@ -40,6 +40,8 @@ export interface SearchSpot {
   z: number;
   cls: SearchClass;
   tier: PhoneTier;
+  /** which floor (default 0) */
+  level?: 0 | 1;
 }
 
 export const SEARCH_SPOTS: SearchSpot[] = [
@@ -73,6 +75,28 @@ export const SEARCH_SPOTS: SearchSpot[] = [
   { id: 'storage_shelf', label: 'Shelf boxes', room: 'storage', x: 0.5, y: 1.3, z: 2.4, cls: 'cabinet', tier: 0 },
   // ── Player bedroom (fakes only — you'd remember) ──
   { id: 'player_desk', label: 'Desk drawer', room: 'playerRoom', x: 12.85, y: 0.7, z: 12.05, cls: 'smallDrawer', tier: 0 },
+
+  // ════ UPSTAIRS (level 1, floor at y=2.85) ════
+  // ── Guest bedroom ──
+  { id: 'guest_nightstand', label: 'Guest nightstand', room: 'upGuest', x: 7.9, y: 3.45, z: 0.75, cls: 'smallDrawer', tier: 2, level: 1 },
+  { id: 'guest_wardrobe', label: 'Guest wardrobe', room: 'upGuest', x: 9.7, y: 3.95, z: 1.0, cls: 'wardrobe', tier: 2, level: 1 },
+  { id: 'guest_pillow', label: 'Guest pillow', room: 'upGuest', x: 6.4, y: 3.51, z: 0.75, cls: 'pillow', tier: 0, level: 1 },
+  // ── Study ──
+  { id: 'study_desk', label: 'Study desk drawer', room: 'upStudy', x: 2.4, y: 3.55, z: 0.8, cls: 'smallDrawer', tier: 3, level: 1 },
+  { id: 'study_shelf', label: 'Study bookshelf', room: 'upStudy', x: 0.6, y: 4.05, z: 2.2, cls: 'cabinet', tier: 3, level: 1 },
+  { id: 'study_cabinet', label: 'File cabinet', room: 'upStudy', x: 4.3, y: 3.45, z: 0.65, cls: 'cabinet', tier: 0, level: 1 },
+  // ── Sewing room ──
+  { id: 'sewing_drawer', label: 'Sewing table drawer', room: 'upSewing', x: 12.5, y: 3.55, z: 1.35, cls: 'smallDrawer', tier: 0, level: 1 },
+  { id: 'sewing_basket', label: 'Sewing basket', room: 'upSewing', x: 14.3, y: 3.25, z: 0.8, cls: 'box', tier: 3, level: 1 },
+  { id: 'sewing_cabinet', label: 'Fabric cabinet', room: 'upSewing', x: 14.4, y: 3.85, z: 3.4, cls: 'cabinet', tier: 2, level: 1 },
+  // ── Junk room ──
+  { id: 'junk_box1', label: 'Dusty box', room: 'upJunk', x: 1.0, y: 3.35, z: 12.3, cls: 'box', tier: 3, level: 1 },
+  { id: 'junk_box2', label: 'Old box', room: 'upJunk', x: 2.4, y: 3.35, z: 12.4, cls: 'box', tier: 0, level: 1 },
+  { id: 'junk_crate', label: 'Wooden crate', room: 'upJunk', x: 6.8, y: 3.35, z: 12.5, cls: 'box', tier: 0, level: 1 },
+  // ── Laundry room ──
+  { id: 'laundry_machine', label: 'Washing machine', room: 'upLaundry', x: 8.2, y: 3.4, z: 12.2, cls: 'cabinet', tier: 2, level: 1 },
+  { id: 'laundry_shelf', label: 'Laundry shelf', room: 'upLaundry', x: 14.4, y: 3.85, z: 11.5, cls: 'cabinet', tier: 0, level: 1 },
+  { id: 'laundry_pile', label: 'Pile of clothes', room: 'upLaundry', x: 12.5, y: 3.15, z: 12.3, cls: 'pillow', tier: 0, level: 1 },
 ];
 
 /** GDD §7 spawn tiers: 20% T1, 40% T2, 40% T3 — then uniform inside the tier. */
@@ -135,6 +159,8 @@ export interface HideSpot {
   check: [number, number];
   /** counts as "in bed" for endings */
   isBed?: boolean;
+  /** which floor (default 0) */
+  level?: 0 | 1;
 }
 
 export const HIDE_SPOTS: HideSpot[] = [
@@ -146,6 +172,11 @@ export const HIDE_SPOTS: HideSpot[] = [
   { id: 'h_storage_box', label: 'Hide inside the big box', room: 'storage', x: 3.6, y: 0.5, z: 0.9, cam: [3.6, 0.7, 0.9], camYaw: Math.PI, exit: [3.6, 1.9], safety: 0.75, check: [3.4, 1.8] },
   { id: 'h_shower', label: 'Hide behind the shower curtain', room: 'bathroom', x: 9.6, y: 1.0, z: 3.2, cam: [9.8, 1.45, 3.3], camYaw: Math.PI / 4, exit: [8.9, 2.8], safety: 0.7, check: [8.9, 2.9] },
   { id: 'h_mom_bed_under', label: "Hide under Mom's bed", room: 'momRoom', x: 1.6, y: 0.25, z: 6.4, cam: [1.2, 0.28, 5.8], camYaw: Math.PI, exit: [2.0, 6.9], safety: 0.85, check: [2.2, 6.0] },
+  // ── upstairs ──
+  { id: 'h_guest_bed_under', label: 'Hide under the guest bed', room: 'upGuest', x: 6.4, y: 3.1, z: 2.7, cam: [6.4, 3.13, 1.8], camYaw: 0, exit: [6.4, 3.2], safety: 0.8, check: [6.6, 2.9], level: 1 },
+  { id: 'h_guest_wardrobe', label: 'Hide in the guest wardrobe', room: 'upGuest', x: 9.7, y: 3.85, z: 1.0, cam: [10.05, 4.3, 1.0], camYaw: Math.PI / 2, exit: [9.3, 1.0], safety: 0.65, check: [9.4, 1.1], level: 1 },
+  { id: 'h_junk_sheet', label: 'Hide under the dust sheet', room: 'upJunk', x: 1.0, y: 3.35, z: 10.3, cam: [0.85, 3.45, 10.3], camYaw: -Math.PI / 2, exit: [1.8, 10.5], safety: 0.6, check: [1.7, 10.4], level: 1 },
+  { id: 'h_laundry_pile', label: 'Burrow into the clothes pile', room: 'upLaundry', x: 12.5, y: 3.25, z: 12.3, cam: [12.5, 3.35, 12.5], camYaw: 0, exit: [12.5, 11.6], safety: 0.7, check: [12.4, 11.7], level: 1 },
 ];
 
 export function getHideSpot(id: string): HideSpot {
@@ -166,4 +197,12 @@ export const PATROL_POINTS: { id: string; node: string }[] = [
   { id: 'p_living_e', node: 'living_e' },
   { id: 'p_bathroom', node: 'bathroom' },
   { id: 'p_player', node: 'playerRoom' },
+  // upstairs rounds — she checks the second floor too
+  { id: 'p_up_hall', node: 'upHall' },
+  { id: 'p_up_hall_w', node: 'up_hall_w' },
+  { id: 'p_up_guest', node: 'upGuest' },
+  { id: 'p_up_study', node: 'upStudy' },
+  { id: 'p_up_sewing', node: 'upSewing' },
+  { id: 'p_up_junk', node: 'upJunk' },
+  { id: 'p_up_laundry', node: 'upLaundry' },
 ];
