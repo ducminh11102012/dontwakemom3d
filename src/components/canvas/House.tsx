@@ -344,7 +344,7 @@ function Stairs() {
   const stepMat = useMemo(() => new THREE.MeshStandardMaterial({ map: wood, roughness: 0.75 }), [wood]);
   const darkMat = useMemo(() => new THREE.MeshStandardMaterial({ color: '#2e2218', roughness: 0.85 }), []);
 
-  const run = STAIR_Z_BOTTOM - STAIR_Z_TOP; // 3.6 — stairs descend toward +z
+  const run = STAIR_Z_BOTTOM - STAIR_Z_TOP; // 3.0 — stairs descend toward +z
   const STEPS = 14;
   const rise = LEVEL_Y / STEPS;
   const depth = run / STEPS;
@@ -361,9 +361,9 @@ function Stairs() {
 
   // under-stair stringer colliders (walkable ramp handled by PlayerController)
   const stringers = [
-    { z0: 5.0, z1: 5.9, top: 2.02 },
-    { z0: 5.9, z1: 6.8, top: 1.3 },
-    { z0: 6.8, z1: 7.7, top: 0.59 },
+    { z0: 5.0, z1: 6.0, top: 1.78 },
+    { z0: 6.0, z1: 7.0, top: 0.83 },
+    { z0: 7.0, z1: 7.6, top: 0.26 },
   ];
 
   return (

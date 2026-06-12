@@ -25,7 +25,7 @@
  *   └──────────────────┴────────────────┘ z=13
  *  x=0                x=7.5            x=15
  *
- * The staircase runs along the kitchen's east wall: bottom at (14.4, 8.6),
+ * The staircase runs along the kitchen's east wall: bottom at (14.4, 8.0),
  * top at (14.4, 5.0), rising to LEVEL_Y. The stairwell hole in the upstairs
  * slab is x 13.8–15, z 4.69–7.9.
  */
@@ -57,7 +57,7 @@ export const LEVEL_Y = 2.85;
 export const STAIR_X0 = 13.8;
 export const STAIR_X1 = 15;
 export const STAIR_Z_TOP = 5.0; // y = LEVEL_Y here
-export const STAIR_Z_BOTTOM = 8.6; // y = 0 here
+export const STAIR_Z_BOTTOM = 8.0; // y = 0 here (1 m clear of the z=9 wall so you can step on)
 /** stairwell hole in the upstairs slab */
 export const STAIR_HOLE_Z0 = 4.69;
 export const STAIR_HOLE_Z1 = 7.9;
@@ -311,9 +311,9 @@ export const NAV_NODES: NavNode[] = [
   { id: 'nd_player', x: 9.85, z: 9, y: 0, room: 'hallway', door: 'd_player' },
   { id: 'nd_lp', x: 9, z: 11.2, y: 0, room: 'living', door: 'd_lp' },
   // ── staircase ──
-  { id: 'stairs_foot', x: 14.3, z: 8.9, y: 0, room: 'kitchen' },
-  { id: 'stairs_bottom', x: 14.4, z: 8.45, y: 0.12, room: 'kitchen' },
-  { id: 'stairs_mid', x: 14.4, z: 6.8, y: 1.43, room: 'upHall' },
+  { id: 'stairs_foot', x: 14.3, z: 8.5, y: 0, room: 'kitchen' },
+  { id: 'stairs_bottom', x: 14.4, z: 7.85, y: 0.14, room: 'kitchen' },
+  { id: 'stairs_mid', x: 14.4, z: 6.5, y: 1.43, room: 'upHall' },
   { id: 'stairs_top', x: 14.4, z: 5.0, y: LEVEL_Y, room: 'upHall' },
   { id: 'stairs_exit', x: 14.0, z: 5.05, y: LEVEL_Y, room: 'upHall' },
   // ── upstairs: room centers ──
