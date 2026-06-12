@@ -48,7 +48,7 @@ import {
 } from '../constants';
 import { getRoom, roomAt } from '../game/house';
 import { blockersBetween, emitNoise, runtime } from '../game/runtime';
-import { findInteractable, FLASHLIGHT_POS } from '../game/interactions';
+import { findInteractable, spotItem, FLASHLIGHT_POS } from '../game/interactions';
 import { getHideSpot, SEARCH_CLASS_DATA, getSpot } from '../game/spots';
 import { momAIRef } from '../game/momAI';
 import { useGameStore } from '../state/gameStore';
@@ -135,9 +135,38 @@ export default function PlayerController() {
         const base = SEARCH_CLASS_DATA[hit.spot.cls];
         const dur = base.time * SEARCH_TIME_FACTOR[store.difficulty];
         searching.current = { id: hit.spot.id, t: 0, dur, isReturn: false };
-        // Mom hears the search BEFORE it finishes (GDD §8)
+        // the container opens toward the player (snapped to the nearest axis)
+        const ox = runtime.playerX - hit.spot.x;
+        const oz = runtime.playerZ - hit.spot.z;
+        runtime.spotOpenDir[hit.spot.id] =
+          Math.abs(ox) > Math.abs(oz) ? [Math.sign(ox) || 1, 0] : [0, Math.sign(oz) || 1];
+        // Mom hears the container opening BEFORE it finishes (GDD §8)
         emitNoise(hit.spot.x, hit.spot.z, base.noise, 'search');
         audioEngine.searchRustle(hit.spot.x, hit.spot.z, dur, base.noise);
+        break;
+      }
+      case 'take': {
+        switch (hit.item) {
+          case 'phone':
+            audioEngine.uiBeep(900, 0.07);
+            store.pickUpPhone();
+            break;
+          case 'key':
+            store.findKey();
+            store.notify('A small brass key. The storage room…');
+            audioEngine.uiBeep(780, 0.06);
+            break;
+          case 'note':
+            store.findNote();
+            store.notify(`A crumpled note: “safe — ${store.safeCode}”`);
+            audioEngine.uiBeep(700, 0.06);
+            break;
+          case 'dart':
+            store.findDart();
+            store.notify('A tranquilizer dart. Why does Mom own these?');
+            audioEngine.uiBeep(660, 0.06);
+            break;
+        }
         break;
       }
       case 'return': {
@@ -249,7 +278,9 @@ export default function PlayerController() {
     if (searching.current && playing) {
       const s = searching.current;
       s.t += dt;
-      store.setSearchProgress(Math.min(1, s.t / s.dur));
+      const prog = Math.min(1, s.t / s.dur);
+      store.setSearchProgress(prog);
+      if (!s.isReturn) runtime.spotAnim[s.id] = prog; // container swings/slides open
       body.setLinvel({ x: 0, y: body.linvel().y, z: 0 }, true);
       if (s.t >= s.dur) {
         store.setSearchProgress(null);
@@ -260,32 +291,10 @@ export default function PlayerController() {
           store.notify('You put the phone back.');
         } else {
           runtime.openedSpots.add(s.id);
-          if (s.id === store.phoneSpotId) {
-            audioEngine.uiBeep(900, 0.07);
-            store.pickUpPhone();
-          } else {
-            // Granny loop: keys, notes and darts hide in the clutter
-            let found = false;
-            if (s.id === store.keySpotId && !store.hasStorageKey) {
-              store.findKey();
-              store.notify('A small brass key. The storage room…');
-              audioEngine.uiBeep(780, 0.06);
-              found = true;
-            }
-            if (s.id === store.noteSpotId && !store.knowsCode) {
-              store.findNote();
-              store.notify(`A crumpled note: “safe — ${store.safeCode}”`);
-              audioEngine.uiBeep(700, 0.06);
-              found = true;
-            }
-            if (s.id === store.dartSpotId) {
-              store.findDart();
-              store.notify('A tranquilizer dart. Why does Mom own these?');
-              audioEngine.uiBeep(660, 0.06);
-              found = true;
-            }
-            if (!found) store.notify('Nothing here…');
-          }
+          runtime.spotAnim[s.id] = 1;
+          // look inside: the loot (if any) is now visible — press E to take it
+          if (spotItem(s.id, store)) audioEngine.uiBeep(840, 0.05);
+          else store.notify('Nothing inside…');
         }
         searching.current = null;
       }

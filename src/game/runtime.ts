@@ -74,6 +74,11 @@ export const runtime = {
   /** searched spots left open (evidence for Mom) */
   openedSpots: new Set<string>(),
 
+  /** container open animation 0..1 per spot id */
+  spotAnim: {} as Record<string, number>,
+  /** direction the container opens toward (unit x,z — toward the player) */
+  spotOpenDir: {} as Record<string, [number, number]>,
+
   /** static wall segments for LOS */
   wallSegs: [] as Seg[],
 
@@ -105,6 +110,8 @@ export const runtime = {
     this.doorOpen = {};
     this.doorLocked = {};
     this.openedSpots = new Set();
+    this.spotAnim = {};
+    this.spotOpenDir = {};
     this.clock = 0;
     this.wallSegs = buildWallSegments();
   },

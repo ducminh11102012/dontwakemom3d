@@ -13,6 +13,7 @@ export const FLASHLIGHT_POS: [number, number, number] = [10.6, 0.82, 9.62];
 
 export type Interactable =
   | { type: 'search'; spot: SearchSpot; label: string }
+  | { type: 'take'; spot: SearchSpot; item: SpotItem; label: string }
   | { type: 'return'; spot: SearchSpot; label: string }
   | { type: 'hide'; spot: HideSpot; label: string }
   | { type: 'door'; door: DoorDef; label: string; lockHint: boolean; needsKey: boolean }
@@ -20,6 +21,44 @@ export type Interactable =
   | { type: 'flashlight'; label: string };
 
 const REACH = 1.7;
+
+// ── container contents ──────────────────────────────────────────────────────
+
+export type SpotItem = 'phone' | 'key' | 'note' | 'dart';
+
+type StoreState = ReturnType<typeof useGameStore.getState>;
+
+/** what is (still) inside an opened container? */
+export function spotItem(spotId: string, store: StoreState): SpotItem | null {
+  if (spotId === store.phoneSpotId && !store.hasPhone && !store.phoneReturned) return 'phone';
+  if (spotId === store.keySpotId && !store.hasStorageKey) return 'key';
+  if (spotId === store.noteSpotId && !store.knowsCode) return 'note';
+  if (spotId === store.dartSpotId && !store.dartTaken) return 'dart';
+  return null;
+}
+
+const TAKE_LABEL: Record<SpotItem, string> = {
+  phone: 'Take the phone',
+  key: 'Take the brass key',
+  note: 'Read the note',
+  dart: 'Take the tranquilizer dart',
+};
+
+/** verb for opening a container, per class */
+function openVerb(spot: SearchSpot): string {
+  switch (spot.cls) {
+    case 'pillow':
+      return `Lift ${spot.label}`;
+    case 'rice':
+    case 'box':
+      return `Open ${spot.label}`;
+    case 'smallDrawer':
+    case 'largeDrawer':
+      return `Pull open ${spot.label}`;
+    default:
+      return `Open ${spot.label}`;
+  }
+}
 
 function dist2(x: number, z: number): number {
   const dx = x - runtime.playerX;
@@ -75,8 +114,14 @@ export function findInteractable(yaw: number): Interactable | null {
     if (store.hasPhone && s.id === store.phoneSpotId) {
       best = { type: 'return', spot: s, label: `Put the phone back (${s.label})` };
       bestD = d;
-    } else if (!store.hasPhone && !runtime.openedSpots.has(s.id) && !store.phoneReturned) {
-      best = { type: 'search', spot: s, label: `Search ${s.label}` };
+    } else if (runtime.openedSpots.has(s.id)) {
+      const item = spotItem(s.id, store);
+      if (item) {
+        best = { type: 'take', spot: s, item, label: TAKE_LABEL[item] };
+        bestD = d;
+      }
+    } else if (!store.hasPhone && !store.phoneReturned) {
+      best = { type: 'search', spot: s, label: openVerb(s) };
       bestD = d;
     }
   }

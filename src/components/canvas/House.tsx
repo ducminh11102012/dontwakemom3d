@@ -18,6 +18,7 @@ import {
 import { FURNITURE, type MaterialKey, type Part } from '../../game/furnitureData';
 import { DOOR_HEIGHT, SAFE_POS, WALL_HEIGHT, WALL_THICKNESS } from '../../constants';
 import { runtime } from '../../game/runtime';
+import { Containers } from './Containers';
 import { useGameStore } from '../../state/gameStore';
 import {
   createCarpetTexture,
@@ -441,6 +442,7 @@ export default function House() {
       ))}
       <DoorBlockers />
       <Furniture />
+      <Containers />
       <Safe />
       <WindowPane position={[14.98, 1.5, 11]} rotY={-Math.PI / 2} />
       <WindowPane position={[0.02, 1.5, 11]} rotY={Math.PI / 2} />

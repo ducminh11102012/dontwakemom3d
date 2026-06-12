@@ -64,6 +64,7 @@ interface GameState {
   safeOpen: boolean;
   hasTranqGun: boolean;
   darts: number;
+  dartTaken: boolean;
   keypadOpen: boolean;
 
   // mom (UI snapshot)
@@ -153,6 +154,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   safeOpen: false,
   hasTranqGun: false,
   darts: 0,
+  dartTaken: false,
   keypadOpen: false,
 
   momState: 'sleep',
@@ -202,6 +204,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       safeOpen: false,
       hasTranqGun: false,
       darts: 0,
+      dartTaken: false,
       keypadOpen: false,
       hasPhone: false,
       phoneReturned: false,
@@ -261,7 +264,7 @@ export const useGameStore = create<GameState>((set, get) => ({
 
   findKey: () => set({ hasStorageKey: true }),
   findNote: () => set({ knowsCode: true }),
-  findDart: () => set((s) => ({ darts: s.darts + 1 })),
+  findDart: () => set((s) => ({ darts: s.darts + 1, dartTaken: true })),
   openSafe: () =>
     set((s) => ({
       safeOpen: true,

@@ -218,7 +218,7 @@ export default function HUD() {
         {searchProgress !== null && (
           <div className="search-bar">
             <div className="search-fill" style={{ width: `${searchProgress * 100}%` }} />
-            <span>searching…</span>
+            <span>opening…</span>
           </div>
         )}
 
