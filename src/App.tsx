@@ -1,32 +1,48 @@
 /**
  * App.tsx
  * -------
- * Application root. In Phase 0 this is a deliberately minimal placeholder
- * screen that proves the toolchain (Vite + React + TS, strict mode) and the
- * zustand store both work. Phase 1 replaces the placeholder with the R3F
- * <Canvas>, pointer-lock controls and the first test room.
+ * Application root (Phase 1): fullscreen R3F <Canvas> + the "Click to Play"
+ * overlay that doubles as a temporary menu/pause screen until Phase 8.
+ *
+ * Flow:
+ *  - gamePhase 'menu' / 'paused' → overlay visible, pointer unlocked.
+ *  - Any click locks the pointer (PointerLockControls listens on document)
+ *    → 'playing', overlay hidden.
+ *  - Escape exits pointer lock natively → onUnlock → 'paused', overlay back.
  */
 
-import { GAME_TITLE, GAME_VERSION } from './constants';
+import { Canvas } from '@react-three/fiber';
+import { GAME_TITLE } from './constants';
 import { useGameStore } from './state/gameStore';
+import Experience from './components/Experience';
 import './App.css';
 
 export default function App() {
-  // Smoke-test the store wiring (Phase 0 sanity check — pun intended).
   const gamePhase = useGameStore((s) => s.gamePhase);
+  const showOverlay = gamePhase !== 'playing';
 
   return (
-    <div className="phase0-screen">
-      <p className="phase0-floor">FLOOR 09</p>
-      <h1 className="phase0-title">{GAME_TITLE}</h1>
-      <p className="phase0-sub">
-        the elevator is not coming back<span className="phase0-cursor">▌</span>
-      </p>
-      <p className="phase0-meta">
-        build {GAME_VERSION} · phase 0 — project setup complete · state:{' '}
-        {gamePhase}
-      </p>
-      {/* PHASE_1_TODO: replace this placeholder with the R3F <Canvas> scene. */}
+    <div className="app-root">
+      <Canvas
+        camera={{ fov: 75, near: 0.05, far: 60 }}
+        gl={{ antialias: true }}
+        dpr={[1, 2]}
+      >
+        <Experience />
+      </Canvas>
+
+      {showOverlay && (
+        <div className="lock-overlay">
+          <p className="lock-floor">FLOOR 09</p>
+          <h1 className="lock-title">{GAME_TITLE}</h1>
+          <p className="lock-action">
+            {gamePhase === 'paused' ? 'paused — click to resume' : 'click to play'}
+          </p>
+          <p className="lock-hint">
+            WASD move · Shift sprint · Ctrl/C crouch · Esc pause
+          </p>
+        </div>
+      )}
     </div>
   );
 }

@@ -2,8 +2,8 @@
  * gameStore.ts
  * ------------
  * Global zustand store — the single source of truth for ALL cross-system state
- * (section 0.6 of the project brief): game phase, sanity, inventory/objective
- * flags, Tenant AI state, settings/difficulty.
+ * (section 0.6 of the project brief): game phase, player condition, inventory/
+ * objective flags, Tenant AI state, settings/difficulty.
  *
  * Conventions:
  *  - Components read/write via the `useGameStore` hook. No prop drilling.
@@ -11,7 +11,12 @@
  *    systems; only push to this store when the UI must react.
  *  - AI / phase states are string literal unions, strictly typed.
  *
- * Phase 0 ships the typed skeleton only. Later phases extend it:
+ * Phase 1 additions: `stamina`, `isCrouching`, `isSprinting` (+ setters).
+ * NOTE: stamina is currently pushed to the store continuously while it changes
+ * (clamped to whole-number changes inside the PlayerController). If this ever
+ * shows up in profiling, throttle it / keep it in a ref — see PHASE_1_NOTES.md.
+ *
+ * Later phases extend it:
  *  - PHASE_4_TODO: sanity decay/regen actions + tier helpers
  *  - PHASE_5_TODO: Tenant state transitions driven by its state machine
  *  - PHASE_6_TODO: inventory/searchable-object integration, flashlight battery
@@ -20,7 +25,7 @@
  */
 
 import { create } from 'zustand';
-import { FLASHLIGHT_BATTERY_MAX, SANITY_START } from '../constants';
+import { FLASHLIGHT_BATTERY_MAX, SANITY_START, STAMINA_MAX } from '../constants';
 
 // ── State unions ────────────────────────────────────────────────────────────
 
@@ -46,6 +51,9 @@ export interface GameState {
 
   // Player condition
   sanity: number; // 0–100, see SANITY_* constants
+  stamina: number; // 0–100, see STAMINA_* constants (Phase 1)
+  isCrouching: boolean; // player is currently crouched (Phase 1)
+  isSprinting: boolean; // player is currently sprinting (Phase 1)
   flashlightBattery: number; // 0–100 (Phase 6)
   isHidden: boolean; // player is inside a hiding spot (Phase 6)
 
@@ -60,6 +68,9 @@ export interface GameState {
   setGamePhase: (phase: GamePhase) => void;
   setDifficulty: (difficulty: Difficulty) => void;
   setSanity: (sanity: number) => void;
+  setStamina: (stamina: number) => void;
+  setIsCrouching: (isCrouching: boolean) => void;
+  setIsSprinting: (isSprinting: boolean) => void;
   setTenantState: (state: TenantState) => void;
   resetRun: () => void;
 }
@@ -69,6 +80,9 @@ export interface GameState {
 const initialRunState = {
   ending: null as EndingType,
   sanity: SANITY_START,
+  stamina: STAMINA_MAX,
+  isCrouching: false,
+  isSprinting: false,
   flashlightBattery: FLASHLIGHT_BATTERY_MAX,
   isHidden: false,
   hasPhone: false,
@@ -86,8 +100,18 @@ export const useGameStore = create<GameState>()((set) => ({
   setGamePhase: (gamePhase) => set({ gamePhase }),
   setDifficulty: (difficulty) => set({ difficulty }),
   setSanity: (sanity) => set({ sanity: Math.max(0, Math.min(100, sanity)) }),
+  setStamina: (stamina) =>
+    set({ stamina: Math.max(0, Math.min(STAMINA_MAX, stamina)) }),
+  setIsCrouching: (isCrouching) => set({ isCrouching }),
+  setIsSprinting: (isSprinting) => set({ isSprinting }),
   setTenantState: (tenantState) => set({ tenantState }),
 
   /** Reset everything that belongs to a single run (used by restart flow). */
   resetRun: () => set({ ...initialRunState }),
 }));
+
+// ── Dev-only debug handle (smoke tests; stripped from production builds) ────
+if (import.meta.env.DEV && typeof window !== 'undefined') {
+  (window as unknown as Record<string, unknown>).__NINTH_FLOOR_STORE__ =
+    useGameStore;
+}
