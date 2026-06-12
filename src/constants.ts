@@ -47,7 +47,7 @@ export const DOOR_HEIGHT = 2.1;
 
 // ── Spawn: player bedroom, standing by the bed ─────────────────────────────
 export const SPAWN_POSITION: [number, number] = [12.5, 11.8]; // x,z
-export const SPAWN_YAW = Math.PI; // facing +Z? 0 = -Z. PI → +Z (door side)
+export const SPAWN_YAW = 0.76; // facing the bedroom door (north-west into the room)
 
 // ── Noise intensities (GDD §12 table) ───────────────────────────────────────
 export const NOISE_CROUCH_CARPET = 0.05;
