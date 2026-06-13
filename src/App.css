@@ -201,6 +201,21 @@ html, body, #root, .app-root {
   position: absolute; right: 16px; top: 16px; z-index: 12;
   border: 1px solid #36406e; background: rgba(8, 10, 18, 0.82); padding: 4px;
 }
+.map-tabs {
+  display: flex; gap: 0; margin-bottom: 2px;
+}
+.map-tab {
+  flex: 1; padding: 3px 0; border: 1px solid #2a3158; background: rgba(20,24,40,0.7);
+  color: #5a648c; font-size: 10px; font-family: monospace; letter-spacing: 0.12em;
+  cursor: pointer; text-align: center; outline: none; transition: all 0.15s;
+}
+.map-tab:first-child { border-radius: 3px 0 0 0; }
+.map-tab:last-child { border-radius: 0 3px 0 0; }
+.map-tab-active {
+  background: rgba(60,80,140,0.35); color: #9ab4e0; border-color: #4a5a8e;
+  text-shadow: 0 0 6px rgba(120,170,255,0.3);
+}
+.map-tab:hover:not(.map-tab-active) { background: rgba(40,50,80,0.4); color: #7a88b0; }
 .map-caption { text-align: center; color: var(--dim); font-size: 10px; padding: 2px; }
 
 /* ── inventory (Granny loop) ──────────────────────────── */

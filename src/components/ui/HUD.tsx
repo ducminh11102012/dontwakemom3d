@@ -80,7 +80,12 @@ function MapOverlay() {
   const difficulty = useGameStore((s) => s.difficulty);
   const gamePhase = useGameStore((s) => s.gamePhase);
   const [open, setOpen] = useState(false);
+  /** Which floor the map is showing: 0 = ground, 1 = upstairs */
+  const [viewFloor, setViewFloor] = useState<0 | 1>(0);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  /* Auto-follow the player's floor */
+  const autoFloorRef = useRef(true);
 
   useEffect(() => {
     if (difficulty === 'hard') return;
@@ -88,6 +93,15 @@ function MapOverlay() {
       if (e.code === 'KeyM' || e.code === 'Tab') {
         e.preventDefault();
         setOpen((v) => !v);
+      }
+      /* 1 / 2 to switch floor manually */
+      if (e.code === 'Digit1' || e.code === 'Numpad1') {
+        setViewFloor(0);
+        autoFloorRef.current = false;
+      }
+      if (e.code === 'Digit2' || e.code === 'Numpad2') {
+        setViewFloor(1);
+        autoFloorRef.current = false;
       }
     };
     window.addEventListener('keydown', onKey);
@@ -104,47 +118,132 @@ function MapOverlay() {
     const ctx = cv.getContext('2d');
     if (!ctx) return;
     const S = 12; // px per meter
+    const PAD = 4;
+
     const draw = () => {
+      /* Auto-follow player floor when not manually overridden */
+      const pLevel = runtime.playerLevel as 0 | 1;
+      if (autoFloorRef.current) {
+        setViewFloor(pLevel);
+      }
+
+      const floor = viewFloor;
+      const floorRooms = ROOMS.filter((r) => r.level === floor);
+
       ctx.clearRect(0, 0, cv.width, cv.height);
       ctx.fillStyle = 'rgba(8,10,18,0.82)';
       ctx.fillRect(0, 0, cv.width, cv.height);
-      for (const r of ROOMS) {
+
+      /* rooms for the viewed floor */
+      for (const r of floorRooms) {
         ctx.strokeStyle = '#3d4566';
         ctx.lineWidth = 2;
-        ctx.strokeRect(r.x0 * S + 4, r.z0 * S + 4, (r.x1 - r.x0) * S, (r.z1 - r.z0) * S);
+        ctx.strokeRect(
+          r.x0 * S + PAD,
+          r.z0 * S + PAD,
+          (r.x1 - r.x0) * S,
+          (r.z1 - r.z0) * S,
+        );
         ctx.fillStyle = '#5a648c';
         ctx.font = '9px monospace';
         ctx.fillText(r.label.toUpperCase(), r.x0 * S + 8, r.z0 * S + 16);
       }
-      // player
-      const px = runtime.playerX * S + 4;
-      const pz = runtime.playerZ * S + 4;
-      ctx.fillStyle = '#7ec8ff';
-      ctx.beginPath();
-      ctx.arc(px, pz, 4, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.strokeStyle = '#7ec8ff';
-      ctx.beginPath();
-      ctx.moveTo(px, pz);
-      ctx.lineTo(px - Math.sin(playerLook.yaw) * 9, pz - Math.cos(playerLook.yaw) * 9);
-      ctx.stroke();
-      // mom (easy + normal)
+
+      /* staircase indicator */
+      ctx.fillStyle = 'rgba(120,180,255,0.12)';
+      if (floor === 0) {
+        /* ground floor: stairs area in kitchen */
+        ctx.fillRect(13.8 * S + PAD, 5.0 * S + PAD, (15 - 13.8) * S, (8.0 - 5.0) * S);
+        ctx.fillStyle = '#5a7fa0';
+        ctx.font = '8px monospace';
+        ctx.fillText('↑STAIRS', 13.8 * S + 6, 6.8 * S + PAD);
+      } else {
+        /* upstairs: stairwell hole */
+        ctx.fillRect(13.8 * S + PAD, 4.69 * S + PAD, (15 - 13.8) * S, (7.9 - 4.69) * S);
+        ctx.fillStyle = '#5a7fa0';
+        ctx.font = '8px monospace';
+        ctx.fillText('↓STAIRS', 13.8 * S + 6, 6.5 * S + PAD);
+      }
+
+      /* player dot */
+      const onThisFloor = pLevel === floor;
+      const px = runtime.playerX * S + PAD;
+      const pz = runtime.playerZ * S + PAD;
+      if (onThisFloor) {
+        ctx.fillStyle = '#7ec8ff';
+        ctx.beginPath();
+        ctx.arc(px, pz, 4, 0, Math.PI * 2);
+        ctx.fill();
+        /* direction line */
+        ctx.strokeStyle = '#7ec8ff';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(px, pz);
+        ctx.lineTo(
+          px - Math.sin(playerLook.yaw) * 9,
+          pz - Math.cos(playerLook.yaw) * 9,
+        );
+        ctx.stroke();
+      } else {
+        /* faded player indicator when on other floor */
+        ctx.fillStyle = 'rgba(126,200,255,0.25)';
+        ctx.beginPath();
+        ctx.arc(px, pz, 3, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      /* mom dot */
+      const momOnFloor = (runtime.momLevel as 0 | 1) === floor;
+      const mx = runtime.momX * S + PAD;
+      const mz = runtime.momZ * S + PAD;
       const awake = runtime.momState !== 'sleep';
-      ctx.fillStyle = awake ? '#ff5a5a' : '#8a6a6a';
-      ctx.beginPath();
-      ctx.arc(runtime.momX * S + 4, runtime.momZ * S + 4, 4.5, 0, Math.PI * 2);
-      ctx.fill();
+      if (momOnFloor) {
+        ctx.fillStyle = awake ? '#ff5a5a' : '#8a6a6a';
+        ctx.beginPath();
+        ctx.arc(mx, mz, 4.5, 0, Math.PI * 2);
+        ctx.fill();
+      } else {
+        /* faded mom when on other floor */
+        ctx.fillStyle = awake ? 'rgba(255,90,90,0.2)' : 'rgba(138,106,106,0.15)';
+        ctx.beginPath();
+        ctx.arc(mx, mz, 3, 0, Math.PI * 2);
+        ctx.fill();
+      }
     };
     draw();
     const id = setInterval(draw, 160);
     return () => clearInterval(id);
-  }, [visible]);
+  }, [visible, viewFloor]);
 
   if (!visible) return null;
   return (
     <div className="map-overlay">
+      <div className="map-tabs">
+        <button
+          className={`map-tab ${viewFloor === 0 ? 'map-tab-active' : ''}`}
+          onPointerDown={(e) => {
+            e.stopPropagation();
+            setViewFloor(0);
+            autoFloorRef.current = false;
+          }}
+        >
+          1F
+        </button>
+        <button
+          className={`map-tab ${viewFloor === 1 ? 'map-tab-active' : ''}`}
+          onPointerDown={(e) => {
+            e.stopPropagation();
+            setViewFloor(1);
+            autoFloorRef.current = false;
+          }}
+        >
+          2F
+        </button>
+      </div>
       <canvas ref={canvasRef} width={15 * 12 + 8} height={13 * 12 + 8} />
-      <div className="map-caption">M — close map</div>
+      <div className="map-caption">
+        M close · 1/2 floor
+      </div>
     </div>
   );
 }
