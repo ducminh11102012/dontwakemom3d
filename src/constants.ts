@@ -106,9 +106,9 @@ export const MOM_DOORWAY_PAUSE_CHANCE = 0.35;
 export const MOM_DOORWAY_PAUSE_MIN = 5;
 export const MOM_DOORWAY_PAUSE_MAX = 10;
 /** Sleep wake thresholds (noise intensity reaching her, attenuated). */
-export const MOM_WAKE_THRESHOLD = 0.27;
-export const MOM_HEAR_BASE_RANGE = 11; // m, scaled by intensity & walls
-export const MOM_WALL_ATTENUATION = 0.45; // intensity multiplier per wall
+export const MOM_WAKE_THRESHOLD = 0.38;
+export const MOM_HEAR_BASE_RANGE = 9; // m, scaled by intensity & walls
+export const MOM_WALL_ATTENUATION = 0.38; // intensity multiplier per wall
 /** Vision cone (GDD §12). */
 export const MOM_VISION_ANGLE = (60 * Math.PI) / 180;
 export const MOM_VISION_RANGE_DARK = 2.4;

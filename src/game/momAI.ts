@@ -95,15 +95,15 @@ interface HearingMul {
   [k: string]: number;
 }
 const HEARING_MUL: HearingMul = {
-  sleep: 0.55,
-  fakeSleep: 0.95,
-  patrol: 1.0,
-  investigate: 1.15,
-  search: 1.25,
-  chase: 1.0,
-  return: 0.9,
+  sleep: 0.38,
+  fakeSleep: 0.8,
+  patrol: 0.85,
+  investigate: 1.0,
+  search: 1.1,
+  chase: 0.9,
+  return: 0.75,
   tranq: 0,
-  finale: 1.0,
+  finale: 0.9,
 };
 
 export class MomAI {
@@ -256,20 +256,20 @@ export class MomAI {
         this.wakeUp([e.x, e.z], e.level);
       }
     } else if (st === 'fakeSleep') {
-      if (loud > 0.08) {
+      if (loud > 0.15) {
         // she rises silently — no notification sound change yet
         this.startInvestigate([e.x, e.z], e.level, true);
       }
     } else if (st === 'patrol' || st === 'return') {
-      if (loud > 0.12) this.startInvestigate([e.x, e.z], e.level);
+      if (loud > 0.18) this.startInvestigate([e.x, e.z], e.level);
     } else if (st === 'investigate') {
-      if (loud > 0.1) {
+      if (loud > 0.15) {
         this.investigatePos = [e.x, e.z];
         this.goTo(e.x, e.z, e.level);
         this.examineTimer = 0;
       }
     } else if (st === 'search') {
-      if (loud > 0.15) {
+      if (loud > 0.22) {
         this.goTo(e.x, e.z, e.level);
       }
     } else if (st === 'finale') {
