@@ -2,6 +2,9 @@
  * House.tsx — renders the entire house: floors, ceiling, walls (with door
  * holes + lintels), animated door panels, furniture, fixtures and lights.
  * All static geometry carries fixed rapier colliders.
+ *
+ * v2: Granny-style polish — baseboards, door frames, crown molding,
+ * wainscoting, better windows, atmospheric lighting.
  */
 
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -28,13 +31,22 @@ import { runtime } from '../../game/runtime';
 import { Containers } from './Containers';
 import { useGameStore } from '../../state/gameStore';
 import {
+  createBaseboardTexture,
   createCarpetTexture,
   createCeilingTexture,
+  createDoorFrameTexture,
   createFabricTexture,
   createTileTexture,
   createWallTexture,
   createWoodTexture,
 } from '../../utils/proceduralTextures';
+
+// ── Trim dimensions ─────────────────────────────────────────────────────────
+const BASEBOARD_H = 0.12;
+const BASEBOARD_D = 0.03;
+const CROWN_H = 0.06;
+const CROWN_D = 0.04;
+const DOOR_FRAME_W = 0.08; // width of frame trim
 
 // ── materials ───────────────────────────────────────────────────────────────
 
@@ -82,10 +94,9 @@ interface WallPiece {
 
 function wallPieces(w: WallDef): WallPiece[] {
   const pieces: WallPiece[] = [];
-  // level 0: wall spans 0→2.6; level 1: spans 2.6→5.45 (covers the slab band)
   const base = w.level === 0 ? 0 : WALL_HEIGHT;
   const top = w.level === 0 ? WALL_HEIGHT : WALL_HEIGHT + LEVEL_Y;
-  const doorBase = w.level * LEVEL_Y; // door holes start at the walking floor
+  const doorBase = w.level * LEVEL_Y;
   const holes = w.doors
     .map((id) => DOORS.find((d) => d.id === id))
     .filter((d): d is DoorDef => !!d)
@@ -106,9 +117,7 @@ function wallPieces(w: WallDef): WallPiece[] {
   };
   for (const hole of holes) {
     push(cursor, hole.a, (base + top) / 2, top - base);
-    // sill below the door hole (level 1: the slab band)
     push(hole.a, hole.b, (base + doorBase) / 2, doorBase - base);
-    // lintel above the door
     const lintelFrom = doorBase + DOOR_HEIGHT;
     push(hole.a, hole.b, (lintelFrom + top) / 2, top - lintelFrom);
     cursor = hole.b;
@@ -120,7 +129,7 @@ function wallPieces(w: WallDef): WallPiece[] {
 function Walls() {
   const wallTex = useMemo(() => createWallTexture(), []);
   const mat = useMemo(
-    () => new THREE.MeshStandardMaterial({ map: wallTex, roughness: 0.9 }),
+    () => new THREE.MeshStandardMaterial({ map: wallTex, roughness: 0.92 }),
     [wallTex],
   );
   const pieces = useMemo(() => WALLS.flatMap(wallPieces), []);
@@ -132,7 +141,7 @@ function Walls() {
             position={[p.cx, p.y, p.cz]}
             material={mat}
             castShadow={false}
-            receiveShadow={false}
+            receiveShadow
           >
             <boxGeometry
               args={
@@ -156,6 +165,246 @@ function Walls() {
   );
 }
 
+// ── baseboards ──────────────────────────────────────────────────────────────
+
+/** Dark wood baseboards along the bottom of every wall segment */
+function Baseboards() {
+  const bbTex = useMemo(() => createBaseboardTexture(), []);
+  const mat = useMemo(
+    () => new THREE.MeshStandardMaterial({ map: bbTex, roughness: 0.85 }),
+    [bbTex],
+  );
+
+  // generate baseboard strips from wall segments, skipping door openings
+  const strips = useMemo(() => {
+    const result: {
+      pos: [number, number, number];
+      size: [number, number, number];
+    }[] = [];
+
+    for (const w of WALLS) {
+      const floorY = w.level * LEVEL_Y;
+      const holes = w.doors
+        .map((id) => DOORS.find((d) => d.id === id))
+        .filter((d): d is DoorDef => !!d)
+        .map((d) => ({ a: d.at - d.width / 2, b: d.at + d.width / 2 }))
+        .sort((a, b) => a.a - b.a);
+
+      let cursor = w.from;
+      const addStrip = (from: number, to: number) => {
+        if (to - from < 0.05) return;
+        const mid = (from + to) / 2;
+        const len = to - from;
+        const offset = WALL_THICKNESS / 2 + BASEBOARD_D / 2;
+        if (w.axis === 'x') {
+          // wall runs along Z at fixed X — baseboards on both sides
+          result.push({
+            pos: [w.fixed + offset, floorY + BASEBOARD_H / 2, mid],
+            size: [BASEBOARD_D, BASEBOARD_H, len],
+          });
+          result.push({
+            pos: [w.fixed - offset, floorY + BASEBOARD_H / 2, mid],
+            size: [BASEBOARD_D, BASEBOARD_H, len],
+          });
+        } else {
+          // wall runs along X at fixed Z
+          result.push({
+            pos: [mid, floorY + BASEBOARD_H / 2, w.fixed + offset],
+            size: [len, BASEBOARD_H, BASEBOARD_D],
+          });
+          result.push({
+            pos: [mid, floorY + BASEBOARD_H / 2, w.fixed - offset],
+            size: [len, BASEBOARD_H, BASEBOARD_D],
+          });
+        }
+      };
+
+      for (const hole of holes) {
+        addStrip(cursor, hole.a);
+        cursor = hole.b;
+      }
+      addStrip(cursor, w.to);
+    }
+    return result;
+  }, []);
+
+  return (
+    <group>
+      {strips.map((s, i) => (
+        <mesh key={i} position={s.pos} material={mat}>
+          <boxGeometry args={s.size} />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
+// ── crown molding ───────────────────────────────────────────────────────────
+
+/** Subtle crown molding at ceiling-wall junction */
+function CrownMolding() {
+  const mat = useMemo(
+    () => new THREE.MeshStandardMaterial({ color: '#352a20', roughness: 0.85 }),
+    [],
+  );
+
+  const strips = useMemo(() => {
+    const result: {
+      pos: [number, number, number];
+      size: [number, number, number];
+    }[] = [];
+
+    for (const w of WALLS) {
+      const ceilY = w.level === 0 ? WALL_HEIGHT : WALL_HEIGHT + LEVEL_Y;
+      // only add crown below the ceiling, not at door holes
+      const holes = w.doors
+        .map((id) => DOORS.find((d) => d.id === id))
+        .filter((d): d is DoorDef => !!d)
+        .map((d) => ({ a: d.at - d.width / 2, b: d.at + d.width / 2 }))
+        .sort((a, b) => a.a - b.a);
+
+      let cursor = w.from;
+      const addStrip = (from: number, to: number) => {
+        if (to - from < 0.05) return;
+        const mid = (from + to) / 2;
+        const len = to - from;
+        const offset = WALL_THICKNESS / 2 + CROWN_D / 2;
+        if (w.axis === 'x') {
+          result.push({
+            pos: [w.fixed + offset, ceilY - CROWN_H / 2, mid],
+            size: [CROWN_D, CROWN_H, len],
+          });
+          result.push({
+            pos: [w.fixed - offset, ceilY - CROWN_H / 2, mid],
+            size: [CROWN_D, CROWN_H, len],
+          });
+        } else {
+          result.push({
+            pos: [mid, ceilY - CROWN_H / 2, w.fixed + offset],
+            size: [len, CROWN_H, CROWN_D],
+          });
+          result.push({
+            pos: [mid, ceilY - CROWN_H / 2, w.fixed - offset],
+            size: [len, CROWN_H, CROWN_D],
+          });
+        }
+      };
+
+      for (const hole of holes) {
+        addStrip(cursor, hole.a);
+        cursor = hole.b;
+      }
+      addStrip(cursor, w.to);
+    }
+    return result;
+  }, []);
+
+  return (
+    <group>
+      {strips.map((s, i) => (
+        <mesh key={i} position={s.pos} material={mat}>
+          <boxGeometry args={s.size} />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
+// ── door frames ─────────────────────────────────────────────────────────────
+
+/** Wooden trim around each doorway */
+function DoorFrames() {
+  const frameTex = useMemo(() => createDoorFrameTexture(), []);
+  const mat = useMemo(
+    () => new THREE.MeshStandardMaterial({ map: frameTex, roughness: 0.8 }),
+    [frameTex],
+  );
+
+  const frames = useMemo(() => {
+    const result: {
+      pos: [number, number, number];
+      size: [number, number, number];
+    }[] = [];
+
+    for (const d of DOORS) {
+      const floorY = d.level * LEVEL_Y;
+      const halfW = d.width / 2;
+      const offset = WALL_THICKNESS / 2 + 0.005; // just proud of the wall
+
+      if (d.axis === 'x') {
+        // wall at fixed X, door spans along Z
+        // left jamb
+        result.push({
+          pos: [d.fixed + offset, floorY + DOOR_HEIGHT / 2, d.at - halfW - DOOR_FRAME_W / 2],
+          size: [0.025, DOOR_HEIGHT, DOOR_FRAME_W],
+        });
+        result.push({
+          pos: [d.fixed - offset, floorY + DOOR_HEIGHT / 2, d.at - halfW - DOOR_FRAME_W / 2],
+          size: [0.025, DOOR_HEIGHT, DOOR_FRAME_W],
+        });
+        // right jamb
+        result.push({
+          pos: [d.fixed + offset, floorY + DOOR_HEIGHT / 2, d.at + halfW + DOOR_FRAME_W / 2],
+          size: [0.025, DOOR_HEIGHT, DOOR_FRAME_W],
+        });
+        result.push({
+          pos: [d.fixed - offset, floorY + DOOR_HEIGHT / 2, d.at + halfW + DOOR_FRAME_W / 2],
+          size: [0.025, DOOR_HEIGHT, DOOR_FRAME_W],
+        });
+        // header
+        result.push({
+          pos: [d.fixed + offset, floorY + DOOR_HEIGHT + DOOR_FRAME_W / 2, d.at],
+          size: [0.025, DOOR_FRAME_W, d.width + DOOR_FRAME_W * 2],
+        });
+        result.push({
+          pos: [d.fixed - offset, floorY + DOOR_HEIGHT + DOOR_FRAME_W / 2, d.at],
+          size: [0.025, DOOR_FRAME_W, d.width + DOOR_FRAME_W * 2],
+        });
+      } else {
+        // wall at fixed Z, door spans along X
+        // left jamb
+        result.push({
+          pos: [d.at - halfW - DOOR_FRAME_W / 2, floorY + DOOR_HEIGHT / 2, d.fixed + offset],
+          size: [DOOR_FRAME_W, DOOR_HEIGHT, 0.025],
+        });
+        result.push({
+          pos: [d.at - halfW - DOOR_FRAME_W / 2, floorY + DOOR_HEIGHT / 2, d.fixed - offset],
+          size: [DOOR_FRAME_W, DOOR_HEIGHT, 0.025],
+        });
+        // right jamb
+        result.push({
+          pos: [d.at + halfW + DOOR_FRAME_W / 2, floorY + DOOR_HEIGHT / 2, d.fixed + offset],
+          size: [DOOR_FRAME_W, DOOR_HEIGHT, 0.025],
+        });
+        result.push({
+          pos: [d.at + halfW + DOOR_FRAME_W / 2, floorY + DOOR_HEIGHT / 2, d.fixed - offset],
+          size: [DOOR_FRAME_W, DOOR_HEIGHT, 0.025],
+        });
+        // header
+        result.push({
+          pos: [d.at, floorY + DOOR_HEIGHT + DOOR_FRAME_W / 2, d.fixed + offset],
+          size: [d.width + DOOR_FRAME_W * 2, DOOR_FRAME_W, 0.025],
+        });
+        result.push({
+          pos: [d.at, floorY + DOOR_HEIGHT + DOOR_FRAME_W / 2, d.fixed - offset],
+          size: [d.width + DOOR_FRAME_W * 2, DOOR_FRAME_W, 0.025],
+        });
+      }
+    }
+    return result;
+  }, []);
+
+  return (
+    <group>
+      {frames.map((f, i) => (
+        <mesh key={i} position={f.pos} material={mat}>
+          <boxGeometry args={f.size} />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
 // ── door panels ─────────────────────────────────────────────────────────────
 
 function DoorPanel({ door }: { door: DoorDef }) {
@@ -164,7 +413,10 @@ function DoorPanel({ door }: { door: DoorDef }) {
     () => new THREE.MeshStandardMaterial({ color: '#3b2c1d', roughness: 0.8 }),
     [],
   );
-  // hinge at one end of the hole
+  const panelMat = useMemo(
+    () => new THREE.MeshStandardMaterial({ color: '#33261a', roughness: 0.85 }),
+    [],
+  );
   const hinge: [number, number] =
     door.axis === 'x'
       ? [door.fixed, door.at - door.width / 2]
@@ -180,45 +432,98 @@ function DoorPanel({ door }: { door: DoorDef }) {
   });
 
   const open = runtime.doorOpen[door.id] ?? (door.startsOpen ? 1 : 0);
+  const dw = door.width;
+  const dh = DOOR_HEIGHT;
+  // panel inset dimensions
+  const pw = dw * 0.35;
+  const topPanelH = dh * 0.28;
+  const botPanelH = dh * 0.32;
+  const panelD = 0.015;
+  const panelOff = 0.032; // slightly proud of door face
 
   return (
     <group position={[hinge[0], door.level * LEVEL_Y, hinge[1]]}>
       <group ref={pivot} rotation={[0, open > 0.5 ? Math.PI / 2 : 0, 0]}>
+        {/* main door slab */}
         <mesh
           position={
             door.axis === 'x'
-              ? [0, DOOR_HEIGHT / 2, door.width / 2]
-              : [door.width / 2, DOOR_HEIGHT / 2, 0]
+              ? [0, dh / 2, dw / 2]
+              : [dw / 2, dh / 2, 0]
           }
           material={mat}
         >
           <boxGeometry
             args={
               door.axis === 'x'
-                ? [0.06, DOOR_HEIGHT, door.width]
-                : [door.width, DOOR_HEIGHT, 0.06]
+                ? [0.06, dh, dw]
+                : [dw, dh, 0.06]
             }
           />
         </mesh>
+        {/* raised panel details (both sides) */}
+        {door.axis === 'x' ? (
+          <>
+            {/* front panels */}
+            <mesh position={[panelOff, dh * 0.66, dw / 2]} material={panelMat}>
+              <boxGeometry args={[panelD, topPanelH, pw]} />
+            </mesh>
+            <mesh position={[panelOff, dh * 0.28, dw / 2]} material={panelMat}>
+              <boxGeometry args={[panelD, botPanelH, pw]} />
+            </mesh>
+            {/* back panels */}
+            <mesh position={[-panelOff, dh * 0.66, dw / 2]} material={panelMat}>
+              <boxGeometry args={[panelD, topPanelH, pw]} />
+            </mesh>
+            <mesh position={[-panelOff, dh * 0.28, dw / 2]} material={panelMat}>
+              <boxGeometry args={[panelD, botPanelH, pw]} />
+            </mesh>
+          </>
+        ) : (
+          <>
+            <mesh position={[dw / 2, dh * 0.66, panelOff]} material={panelMat}>
+              <boxGeometry args={[pw, topPanelH, panelD]} />
+            </mesh>
+            <mesh position={[dw / 2, dh * 0.28, panelOff]} material={panelMat}>
+              <boxGeometry args={[pw, botPanelH, panelD]} />
+            </mesh>
+            <mesh position={[dw / 2, dh * 0.66, -panelOff]} material={panelMat}>
+              <boxGeometry args={[pw, topPanelH, panelD]} />
+            </mesh>
+            <mesh position={[dw / 2, dh * 0.28, -panelOff]} material={panelMat}>
+              <boxGeometry args={[pw, botPanelH, panelD]} />
+            </mesh>
+          </>
+        )}
         {/* knob */}
         <mesh
           position={
             door.axis === 'x'
-              ? [0.06, 1.0, door.width * 0.85]
-              : [door.width * 0.85, 1.0, 0.06]
+              ? [0.06, 1.0, dw * 0.85]
+              : [dw * 0.85, 1.0, 0.06]
           }
         >
           <sphereGeometry args={[0.045, 8, 8]} />
           <meshStandardMaterial color="#8a8576" metalness={0.8} roughness={0.3} />
+        </mesh>
+        {/* knob backplate */}
+        <mesh
+          position={
+            door.axis === 'x'
+              ? [0.04, 1.0, dw * 0.85]
+              : [dw * 0.85, 1.0, 0.04]
+          }
+        >
+          <cylinderGeometry args={[0.03, 0.03, 0.01, 12]} />
+          <meshStandardMaterial color="#706858" metalness={0.7} roughness={0.35} />
         </mesh>
       </group>
     </group>
   );
 }
 
-/** physics blocker for closed panel doors (re-rendered on a slow tick) */
+/** physics blocker for closed panel doors */
 function DoorBlockers() {
-  // poll door state at ~5 Hz via store-free local state
   const [, force] = useReducerTick();
   return (
     <>
@@ -272,12 +577,10 @@ function Floors() {
     [],
   );
 
-  // visual floor rectangles; upstairs rooms skip the stairwell hole
   const floorRects: { x0: number; z0: number; x1: number; z1: number; y: number; floor: 'carpet' | 'tile' | 'wood' }[] = [];
   for (const r of ROOMS) {
     const y = r.level === 0 ? 0 : LEVEL_Y + 0.002;
     if (r.id === 'upHall') {
-      // split around the stairwell hole (x 13.8–15, z 4.69–7.9)
       floorRects.push({ x0: r.x0, z0: r.z0, x1: STAIR_X0, z1: r.z1, y, floor: r.floor });
       floorRects.push({ x0: STAIR_X0, z0: STAIR_HOLE_Z1, x1: r.x1, z1: r.z1, y, floor: r.floor });
       floorRects.push({ x0: STAIR_X0, z0: r.z0, x1: r.x1, z1: STAIR_HOLE_Z0, y, floor: r.floor });
@@ -294,13 +597,14 @@ function Floors() {
           position={[(r.x0 + r.x1) / 2, r.y, (r.z0 + r.z1) / 2]}
           rotation={[-Math.PI / 2, 0, 0]}
           material={mats[r.floor]}
+          receiveShadow
         >
           <planeGeometry args={[r.x1 - r.x0, r.z1 - r.z0]} />
         </mesh>
       ))}
       {/* ground collider */}
       <CuboidCollider position={[7.5, -0.25, 6.5]} args={[8, 0.25, 7]} />
-      {/* upstairs slab colliders (leave the stairwell hole open) */}
+      {/* upstairs slab colliders */}
       <CuboidCollider position={[7.5, LEVEL_Y - 0.125, STAIR_HOLE_Z0 / 2]} args={[7.5, 0.125, STAIR_HOLE_Z0 / 2]} />
       <CuboidCollider
         position={[STAIR_X0 / 2, LEVEL_Y - 0.125, (STAIR_HOLE_Z0 + STAIR_HOLE_Z1) / 2]}
@@ -310,7 +614,7 @@ function Floors() {
         position={[7.5, LEVEL_Y - 0.125, (STAIR_HOLE_Z1 + 13) / 2]}
         args={[7.5, 0.125, (13 - STAIR_HOLE_Z1) / 2]}
       />
-      {/* downstairs ceiling (underside of the slab), hole left open */}
+      {/* downstairs ceiling */}
       {[
         { x0: 0, z0: 0, x1: 15, z1: STAIR_HOLE_Z0 },
         { x0: 0, z0: STAIR_HOLE_Z0, x1: STAIR_X0, z1: STAIR_HOLE_Z1 },
@@ -343,8 +647,9 @@ function Stairs() {
   const wood = useMemo(() => createWoodTexture(), []);
   const stepMat = useMemo(() => new THREE.MeshStandardMaterial({ map: wood, roughness: 0.75 }), [wood]);
   const darkMat = useMemo(() => new THREE.MeshStandardMaterial({ color: '#2e2218', roughness: 0.85 }), []);
+  const riserMat = useMemo(() => new THREE.MeshStandardMaterial({ color: '#261c12', roughness: 0.9 }), []);
 
-  const run = STAIR_Z_BOTTOM - STAIR_Z_TOP; // 3.0 — stairs descend toward +z
+  const run = STAIR_Z_BOTTOM - STAIR_Z_TOP;
   const STEPS = 14;
   const rise = LEVEL_Y / STEPS;
   const depth = run / STEPS;
@@ -353,22 +658,17 @@ function Stairs() {
 
   const steps = [];
   for (let i = 0; i < STEPS; i++) {
-    // step i: top surface at (i+1)*rise, front at z = STAIR_Z_BOTTOM - i*depth
     const z = STAIR_Z_BOTTOM - (i + 0.5) * depth;
     const topY = (i + 1) * rise;
-    steps.push({ z, y: topY - 0.04, h: 0.08 });
+    steps.push({ z, y: topY - 0.04, h: 0.08, riserY: topY - rise / 2 });
   }
 
-  // banister along the open (west) side — must NOT cover the top landing,
-  // or it walls off the exit onto the upstairs hallway (gap at z 4.69-5.7;
-  // the stairwell railing takes over at z 5.7)
   const BAN_Z0 = 5.75;
   const BAN_Z1 = STAIR_Z_BOTTOM + 0.15;
   const banCz = (BAN_Z0 + BAN_Z1) / 2;
   const banLen = ((BAN_Z1 - BAN_Z0) / run) * Math.hypot(run, LEVEL_Y);
-  const rampYAt = (z: number) => ((STAIR_Z_BOTTOM - z) / run) * LEVEL_Y; // unclamped
+  const rampYAt = (z: number) => ((STAIR_Z_BOTTOM - z) / run) * LEVEL_Y;
 
-  // under-stair stringer colliders (walkable ramp handled by PlayerController)
   const stringers = [
     { z0: 5.0, z1: 6.0, top: 1.78 },
     { z0: 6.0, z1: 7.0, top: 0.83 },
@@ -378,11 +678,24 @@ function Stairs() {
   return (
     <group>
       {steps.map((st, i) => (
-        <mesh key={i} position={[cx, st.y, st.z]} material={stepMat}>
-          <boxGeometry args={[width, st.h, depth]} />
-        </mesh>
+        <group key={i}>
+          {/* tread */}
+          <mesh position={[cx, st.y, st.z]} material={stepMat}>
+            <boxGeometry args={[width, st.h, depth]} />
+          </mesh>
+          {/* riser (vertical face) */}
+          {i > 0 && (
+            <mesh position={[cx, st.riserY, st.z + depth / 2]} material={riserMat}>
+              <boxGeometry args={[width - 0.02, rise - st.h, 0.02]} />
+            </mesh>
+          )}
+          {/* nosing (slight overhang) */}
+          <mesh position={[cx, st.y + 0.04, st.z + depth / 2 + 0.015]} material={darkMat}>
+            <boxGeometry args={[width, 0.02, 0.03]} />
+          </mesh>
+        </group>
       ))}
-      {/* closed riser skirt under the steps */}
+      {/* closed riser skirt */}
       <mesh
         position={[cx, LEVEL_Y / 2 - 0.3, (STAIR_Z_TOP + STAIR_Z_BOTTOM) / 2]}
         rotation={[Math.atan2(LEVEL_Y, run), 0, 0]}
@@ -390,7 +703,15 @@ function Stairs() {
       >
         <boxGeometry args={[width, 0.12, Math.hypot(run, LEVEL_Y)]} />
       </mesh>
-      {/* banister along the open (west) side of the stairs (stops short of the top landing) */}
+      {/* stringer along east wall */}
+      <mesh
+        position={[STAIR_X1 - 0.04, rampYAt(banCz) + 0.62, banCz]}
+        rotation={[Math.atan2(LEVEL_Y, run), 0, 0]}
+        material={darkMat}
+      >
+        <boxGeometry args={[0.06, 0.1, banLen]} />
+      </mesh>
+      {/* banister along the open (west) side */}
       <mesh
         position={[STAIR_X0 + 0.04, rampYAt(banCz) + 0.62, banCz]}
         rotation={[Math.atan2(LEVEL_Y, run), 0, 0]}
@@ -398,6 +719,17 @@ function Stairs() {
       >
         <boxGeometry args={[0.07, 0.1, banLen]} />
       </mesh>
+      {/* banister balusters (vertical posts) */}
+      {Array.from({ length: 6 }, (_, i) => {
+        const t = (i + 0.5) / 6;
+        const z = BAN_Z0 + t * (BAN_Z1 - BAN_Z0);
+        const y = rampYAt(z);
+        return (
+          <mesh key={`bal${i}`} position={[STAIR_X0 + 0.04, y + 0.3, z]} material={darkMat}>
+            <boxGeometry args={[0.04, 0.6, 0.04]} />
+          </mesh>
+        );
+      })}
       <RigidBody type="fixed" colliders={false}>
         {stringers.map((st, i) => (
           <CuboidCollider
@@ -406,8 +738,6 @@ function Stairs() {
             args={[width / 2, st.top / 2, (st.z1 - st.z0) / 2]}
           />
         ))}
-        {/* banister collider keeps the player from strafing off the open side;
-            it ends at z 5.75 so the top landing exit (z 4.69-5.7) stays open */}
         <CuboidCollider
           position={[STAIR_X0 + 0.04, rampYAt(banCz) + 0.5, banCz]}
           args={[0.05, LEVEL_Y / 2 + 0.7, (BAN_Z1 - BAN_Z0) / 2]}
@@ -421,20 +751,16 @@ function Stairs() {
 function Railings() {
   const mat = useMemo(() => new THREE.MeshStandardMaterial({ color: '#2e2218', roughness: 0.85 }), []);
   const rails: { p: [number, number, number]; s: [number, number, number] }[] = [
-    // west edge of the hole (gap at z 4.69–5.7 = stair exit)
     { p: [STAIR_X0, LEVEL_Y + 0.45, (5.7 + STAIR_HOLE_Z1) / 2], s: [0.08, 0.9, STAIR_HOLE_Z1 - 5.7] },
-    // south edge of the hole
     { p: [(STAIR_X0 + STAIR_X1) / 2, LEVEL_Y + 0.45, STAIR_HOLE_Z1], s: [STAIR_X1 - STAIR_X0, 0.9, 0.08] },
   ];
   return (
     <group>
       {rails.map((r, i) => (
         <group key={i}>
-          {/* top rail */}
           <mesh position={[r.p[0], LEVEL_Y + 0.88, r.p[2]]} material={mat}>
             <boxGeometry args={[Math.max(r.s[0], 0.1), 0.08, Math.max(r.s[2], 0.1)]} />
           </mesh>
-          {/* balusters as a thin panel */}
           <mesh position={r.p} material={mat}>
             <boxGeometry args={r.s} />
           </mesh>
@@ -447,7 +773,7 @@ function Railings() {
   );
 }
 
-// ── furniture // ── furniture ───────────────────────────────────────────────────────────────
+// ── furniture ───────────────────────────────────────────────────────────────
 
 function PartMesh({ part, mats }: { part: Part; mats: Record<MaterialKey, THREE.Material> }) {
   const ref = useRef<THREE.Mesh>(null);
@@ -513,59 +839,128 @@ function WindowPane({
   w?: number;
   h?: number;
 }) {
+  const frameMat = useMemo(() => new THREE.MeshStandardMaterial({ color: '#1c1408', roughness: 0.85 }), []);
+  const glassMat = useMemo(() => new THREE.MeshStandardMaterial({
+    color: '#0a1528',
+    roughness: 0.15,
+    metalness: 0.1,
+    transparent: true,
+    opacity: 0.85,
+  }), []);
+  const moonMat = useMemo(() => new THREE.MeshBasicMaterial({ color: '#b0c8e8' }), []);
+
   return (
     <group position={position} rotation={[0, rotY, 0]}>
-      <mesh>
-        <planeGeometry args={[w, h]} />
-        <meshBasicMaterial color="#16213e" />
+      {/* outer frame */}
+      <mesh position={[0, 0, -0.01]} material={frameMat}>
+        <boxGeometry args={[w + 0.1, h + 0.1, 0.04]} />
+      </mesh>
+      {/* glass */}
+      <mesh material={glassMat}>
+        <planeGeometry args={[w - 0.06, h - 0.06]} />
+      </mesh>
+      {/* night sky background */}
+      <mesh position={[0, 0, -0.005]}>
+        <planeGeometry args={[w - 0.06, h - 0.06]} />
+        <meshBasicMaterial color="#0a1225" />
+      </mesh>
+      {/* moon */}
+      <mesh position={[0.25, 0.3, -0.003]}>
+        <circleGeometry args={[0.14, 16]} />
+        {moonMat && <primitive object={moonMat} attach="material" />}
       </mesh>
       {/* moon glow */}
-      <mesh position={[0.25, 0.3, -0.001]}>
-        <circleGeometry args={[0.16, 16]} />
-        <meshBasicMaterial color="#9fb4d8" />
+      <mesh position={[0.25, 0.3, -0.004]}>
+        <circleGeometry args={[0.3, 16]} />
+        <meshBasicMaterial color="#2a3a5a" transparent opacity={0.3} />
       </mesh>
       {/* frame cross */}
-      <mesh position={[0, 0, 0.01]}>
-        <boxGeometry args={[w, 0.05, 0.02]} />
-        <meshStandardMaterial color="#241c12" />
+      <mesh position={[0, 0, 0.01]} material={frameMat}>
+        <boxGeometry args={[w, 0.04, 0.02]} />
       </mesh>
-      <mesh position={[0, 0, 0.01]}>
-        <boxGeometry args={[0.05, h, 0.02]} />
-        <meshStandardMaterial color="#241c12" />
+      <mesh position={[0, 0, 0.01]} material={frameMat}>
+        <boxGeometry args={[0.04, h, 0.02]} />
       </mesh>
+      {/* window sill */}
+      <mesh position={[0, -h / 2 - 0.03, 0.04]} material={frameMat}>
+        <boxGeometry args={[w + 0.14, 0.04, 0.1]} />
+      </mesh>
+      {/* moonlight spill (faint glow into the room) */}
+      <pointLight
+        position={[0, 0, 0.5]}
+        intensity={1.2}
+        distance={3.5}
+        color="#6a82b0"
+        decay={2}
+      />
     </group>
   );
 }
 
 function Lights() {
   const flashlightOn = useGameStore((s) => s.flashlightOn);
-  void flashlightOn; // flashlight itself lives on the camera (PlayerController)
+  void flashlightOn;
   return (
     <>
-      <ambientLight intensity={0.85} color="#3a4565" />
-      {/* moonlight through windows */}
-      <directionalLight position={[18, 6, 11]} intensity={0.7} color="#8ea2cd" />
-      <directionalLight position={[-6, 5, 11]} intensity={0.45} color="#8ea2cd" />
-      {/* faint per-room practicals (storage stays dark) */}
-      <pointLight position={[12.5, 2.3, 11]} intensity={5.2} distance={7} color="#5a6890" />
-      <pointLight position={[2.5, 2.3, 6.5]} intensity={3.6} distance={6.5} color="#564f6a" />
-      <pointLight position={[4.5, 2.3, 11]} intensity={4.8} distance={8} color="#5d5a78" />
-      <pointLight position={[7.75, 2.3, 6.5]} intensity={3.8} distance={6} color="#4d4a62" />
-      <pointLight position={[12.75, 2.3, 4.5]} intensity={4.4} distance={7} color="#4f5a6e" />
-      <pointLight position={[7.75, 2.3, 2]} intensity={2.8} distance={5} color="#48505e" />
-      {/* fridge seam glow */}
-      <pointLight position={[14.1, 0.9, 1.4]} intensity={1.2} distance={2.4} color="#aac6e8" />
-      {/* upstairs practicals (study / sewing / junk stay dark) */}
-      <pointLight position={[7.75, 5.15, 2.3]} intensity={3.6} distance={6.5} color="#564f6a" />
-      <pointLight position={[7.5, 5.15, 6.8]} intensity={4.6} distance={9} color="#5d5a78" />
-      <pointLight position={[11.2, 5.15, 11]} intensity={3.4} distance={6} color="#4f5a6e" />
-      {/* stairwell glow */}
-      <pointLight position={[14.4, 3.4, 6.8]} intensity={2.6} distance={5} color="#5a6890" />
+      {/* very low ambient — the house should feel dark */}
+      <ambientLight intensity={0.45} color="#2a3045" />
+
+      {/* primary moonlight (cold, directional) */}
+      <directionalLight position={[18, 8, 11]} intensity={0.5} color="#7a92c0" />
+      <directionalLight position={[-6, 6, 11]} intensity={0.3} color="#7a92c0" />
+
+      {/* ── Ground floor practicals ── */}
+      {/* Kitchen — cold fluorescent feel */}
+      <pointLight position={[12.5, 2.3, 4.5]} intensity={3.0} distance={6} color="#4a5a70" decay={2} />
+      <pointLight position={[12.5, 2.3, 1.5]} intensity={2.5} distance={5} color="#4a5a70" decay={2} />
+
+      {/* Hallway — dim warm */}
+      <pointLight position={[7.75, 2.3, 6.5]} intensity={2.5} distance={5.5} color="#5a4a3a" decay={2} />
+
+      {/* Living room — warm but dim */}
+      <pointLight position={[4.5, 2.3, 11]} intensity={3.5} distance={7} color="#5a4840" decay={2} />
+
+      {/* Mom's bedroom — barely any light */}
+      <pointLight position={[2.5, 2.3, 6.5]} intensity={1.2} distance={4} color="#3a3548" decay={2} />
+
+      {/* Bathroom — cold */}
+      <pointLight position={[7.75, 2.3, 2]} intensity={1.8} distance={4.5} color="#4a5a68" decay={2} />
+
+      {/* Player bedroom — faint blue */}
+      <pointLight position={[12.5, 2.3, 11]} intensity={2.2} distance={5} color="#3a4a5a" decay={2} />
+
+      {/* Storage — very dark, only crack of light */}
+      <pointLight position={[2.5, 1.5, 2]} intensity={0.6} distance={3} color="#3a3530" decay={2} />
+
+      {/* Fridge seam glow */}
+      <pointLight position={[14.1, 0.9, 1.4]} intensity={1.5} distance={2.0} color="#90b4d8" decay={2} />
+
+      {/* ── Upstairs practicals ── */}
+      {/* Guest bedroom */}
+      <pointLight position={[7.75, 5.15, 2.3]} intensity={2.2} distance={5.5} color="#4a4558" decay={2} />
+
+      {/* Hallway */}
+      <pointLight position={[7.5, 5.15, 6.8]} intensity={3.0} distance={7} color="#5a4a3a" decay={2} />
+
+      {/* Laundry */}
+      <pointLight position={[11.2, 5.15, 11]} intensity={2.0} distance={5} color="#4a5560" decay={2} />
+
+      {/* Stairwell — eerie glow */}
+      <pointLight position={[14.4, 3.4, 6.8]} intensity={1.8} distance={4.5} color="#4a5870" decay={2} />
+
+      {/* Study — dark */}
+      <pointLight position={[2.5, 5.15, 2.3]} intensity={0.8} distance={3.5} color="#3a3530" decay={2} />
+
+      {/* Sewing — dark */}
+      <pointLight position={[12.75, 5.15, 2.3]} intensity={0.8} distance={3.5} color="#3a3530" decay={2} />
+
+      {/* Junk — very dark */}
+      <pointLight position={[3.5, 5.15, 11]} intensity={0.5} distance={3} color="#2a2520" decay={2} />
     </>
   );
 }
 
-/** The code-locked safe in the storage room — holds the tranquilizer gun. */
+/** The code-locked safe in the storage room */
 function Safe() {
   const safeOpen = useGameStore((s) => s.safeOpen);
   return (
@@ -578,7 +973,7 @@ function Safe() {
         <boxGeometry args={[0.6, 0.84, 0.56]} />
         <meshStandardMaterial color="#2c3138" roughness={0.4} metalness={0.75} />
       </mesh>
-      {/* door (swings open once cracked) */}
+      {/* door */}
       <group position={[-0.28, 0.42, -0.29]} rotation={[0, safeOpen ? -1.9 : 0, 0]}>
         <mesh position={[0.27, 0, 0]}>
           <boxGeometry args={[0.52, 0.76, 0.05]} />
@@ -609,11 +1004,96 @@ function Safe() {
   );
 }
 
+// ── light switches ──────────────────────────────────────────────────────────
+
+/** Small visual-only light switch plates on walls near doors */
+function LightSwitches() {
+  const plateMat = useMemo(() => new THREE.MeshStandardMaterial({ color: '#c8c0b0', roughness: 0.6 }), []);
+  const switchMat = useMemo(() => new THREE.MeshStandardMaterial({ color: '#b8b0a0', roughness: 0.5 }), []);
+
+  // place a switch near certain doors
+  const switches: { pos: [number, number, number]; rotY: number }[] = [
+    // hallway near mom's door
+    { pos: [5.12, 1.2, 5.6], rotY: 0 },
+    // hallway near living room arch
+    { pos: [6.2, 1.2, 8.88], rotY: Math.PI / 2 },
+    // kitchen
+    { pos: [10.38, 1.2, 5.8], rotY: Math.PI },
+    // player room
+    { pos: [10.2, 1.2, 9.12], rotY: -Math.PI / 2 },
+    // bathroom
+    { pos: [8.5, 1.2, 3.88], rotY: Math.PI / 2 },
+    // upstairs hallway
+    { pos: [3.2, 1.2 + LEVEL_Y, 4.48], rotY: Math.PI / 2 },
+    { pos: [8.5, 1.2 + LEVEL_Y, 4.48], rotY: Math.PI / 2 },
+  ];
+
+  return (
+    <group>
+      {switches.map((sw, i) => (
+        <group key={i} position={sw.pos} rotation={[0, sw.rotY, 0]}>
+          {/* plate */}
+          <mesh material={plateMat}>
+            <boxGeometry args={[0.07, 0.11, 0.01]} />
+          </mesh>
+          {/* toggle */}
+          <mesh position={[0, 0.01, 0.006]} material={switchMat}>
+            <boxGeometry args={[0.025, 0.04, 0.012]} />
+          </mesh>
+        </group>
+      ))}
+    </group>
+  );
+}
+
+// ── electrical outlet plates ────────────────────────────────────────────────
+
+function Outlets() {
+  const mat = useMemo(() => new THREE.MeshStandardMaterial({ color: '#c8c0b0', roughness: 0.6 }), []);
+
+  const outlets: { pos: [number, number, number]; rotY: number }[] = [
+    { pos: [0.12, 0.35, 5.5], rotY: 0 },
+    { pos: [0.12, 0.35, 11.5], rotY: 0 },
+    { pos: [14.88, 0.35, 3.0], rotY: Math.PI },
+    { pos: [11.0, 0.35, 12.88], rotY: -Math.PI / 2 },
+    { pos: [2.0, 0.35, 8.88], rotY: Math.PI / 2 },
+    // upstairs
+    { pos: [0.12, 0.35 + LEVEL_Y, 6.0], rotY: 0 },
+    { pos: [14.88, 0.35 + LEVEL_Y, 11.5], rotY: Math.PI },
+  ];
+
+  return (
+    <group>
+      {outlets.map((o, i) => (
+        <group key={i} position={o.pos} rotation={[0, o.rotY, 0]}>
+          <mesh material={mat}>
+            <boxGeometry args={[0.05, 0.07, 0.008]} />
+          </mesh>
+          {/* socket holes */}
+          <mesh position={[0, 0.012, 0.005]}>
+            <boxGeometry args={[0.008, 0.018, 0.004]} />
+            <meshStandardMaterial color="#1a1a1a" />
+          </mesh>
+          <mesh position={[0, -0.012, 0.005]}>
+            <boxGeometry args={[0.008, 0.018, 0.004]} />
+            <meshStandardMaterial color="#1a1a1a" />
+          </mesh>
+        </group>
+      ))}
+    </group>
+  );
+}
+
+// ── main export ─────────────────────────────────────────────────────────────
+
 export default function House() {
   return (
     <group>
       <Floors />
       <Walls />
+      <Baseboards />
+      <CrownMolding />
+      <DoorFrames />
       {DOORS.filter((d) => d.kind === 'door').map((d) => (
         <DoorPanel key={d.id} door={d} />
       ))}
@@ -623,10 +1103,13 @@ export default function House() {
       <Safe />
       <Stairs />
       <Railings />
+      <LightSwitches />
+      <Outlets />
+      {/* Downstairs windows */}
       <WindowPane position={[14.98, 1.5, 11]} rotY={-Math.PI / 2} />
       <WindowPane position={[0.02, 1.5, 11]} rotY={Math.PI / 2} />
       <WindowPane position={[0.02, 1.6, 6.2]} rotY={Math.PI / 2} w={1.2} h={1.0} />
-      {/* upstairs windows */}
+      {/* Upstairs windows */}
       <WindowPane position={[7.75, 4.35, 0.06]} rotY={0} />
       <WindowPane position={[0.02, 4.35, 11]} rotY={Math.PI / 2} />
       <WindowPane position={[14.98, 4.35, 11]} rotY={-Math.PI / 2} w={1.2} h={1.0} />
