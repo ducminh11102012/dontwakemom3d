@@ -167,7 +167,6 @@ export interface HideSpot {
 
 export const HIDE_SPOTS: HideSpot[] = [
   { id: 'h_player_bed_in', label: 'Get in bed', room: 'playerRoom', x: 13.4, y: 0.6, z: 10.6, cam: [13.8, 0.55, 10.4], camYaw: Math.PI / 2, exit: [13.0, 11.0], safety: 0.95, check: [13.0, 10.6], isBed: true },
-  { id: 'h_player_bed_under', label: 'Hide under your bed', room: 'playerRoom', x: 13.4, y: 0.25, z: 11.0, cam: [13.9, 0.28, 10.3], camYaw: Math.PI / 2, exit: [13.0, 11.2], safety: 0.9, check: [13.0, 10.8] },
   { id: 'h_player_wardrobe', label: 'Hide in the wardrobe', room: 'playerRoom', x: 10.0, y: 1.0, z: 12.4, cam: [10.0, 1.45, 12.6], camYaw: 0, exit: [10.0, 11.9], safety: 0.7, check: [10.0, 11.8] },
   { id: 'h_sofa', label: 'Hide behind the sofa', room: 'living', x: 4.0, y: 0.4, z: 12.55, cam: [4.0, 0.5, 12.6], camYaw: 0, exit: [5.8, 12.2], safety: 0.5, check: [5.9, 12.4] },
   { id: 'h_curtains', label: 'Hide behind the curtains', room: 'living', x: 0.5, y: 1.0, z: 11.0, cam: [0.35, 1.45, 11.0], camYaw: -Math.PI / 2, exit: [1.2, 11.0], safety: 0.35, check: [1.2, 11.0] },
