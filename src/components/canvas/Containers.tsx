@@ -97,6 +97,20 @@ interface PropProps {
   item: SpotItem | null;
 }
 
+/**
+ * Per-class offset: shifts root along facing direction so the animated
+ * door/drawer aligns with the furniture's front face, not its center.
+ * The values compensate for the furniture body depth; the static door
+ * panels in furnitureData hide via `hideForSpot` at the same frame.
+ */
+const ROOT_OFFSET: Record<string, number> = {
+  cabinet: 0.18,
+  wardrobe: 0.24,
+  fridge: 0.28,
+  smallDrawer: 0.18,
+  largeDrawer: 0.18,
+};
+
 /** one animated search container */
 function SpotProp({ spot, item }: PropProps) {
   // pillows are visible from the start — the prop IS the pillow you lift
@@ -111,7 +125,8 @@ function SpotProp({ spot, item }: PropProps) {
     if (!always && a <= 0.001 && active) setActive(false); // run restarted
     if (!active || !root.current || !moving.current) return;
 
-    const dir = runtime.spotOpenDir[spot.id] ?? [0, 1];
+    // use the spot's fixed facing direction (falls back to its static facing)
+    const dir = runtime.spotOpenDir[spot.id] ?? spot.facing;
     root.current.rotation.y = Math.atan2(dir[0], dir[1]);
     const e = 1 - (1 - a) ** 3; // cubic ease-out — smoother deceleration
 
@@ -152,12 +167,18 @@ function SpotProp({ spot, item }: PropProps) {
   const y = spot.y;
   const loot = revealed && item ? <Loot item={item} /> : null;
 
+  // offset the root along the facing direction so the door aligns with
+  // the furniture's front face instead of sitting inside the body
+  const off = ROOT_OFFSET[cls] ?? 0;
+  const rx = spot.x + spot.facing[0] * off;
+  const rz = spot.z + spot.facing[1] * off;
+
   if (cls === 'smallDrawer' || cls === 'largeDrawer') {
     const w = cls === 'smallDrawer' ? 0.5 : 0.66;
     const d = cls === 'smallDrawer' ? 0.38 : 0.46;
     const h = cls === 'smallDrawer' ? 0.22 : 0.28;
     return (
-      <group ref={root} position={[spot.x, y, spot.z]}>
+      <group ref={root} position={[rx, y, rz]}>
         <group ref={moving}>
           {/* front panel */}
           <mesh position={[0, 0, d / 2]} material={M.wood}>
@@ -187,7 +208,7 @@ function SpotProp({ spot, item }: PropProps) {
 
   if (cls === 'pillow') {
     return (
-      <group ref={root} position={[spot.x, y, spot.z]}>
+      <group ref={root} position={[rx, y, rz]}>
         {/* hinge at the back edge */}
         <group ref={moving} position={[0, 0, -0.22]}>
           <mesh position={[0, 0.05, 0.22]} material={M.sheet}>
@@ -201,7 +222,7 @@ function SpotProp({ spot, item }: PropProps) {
 
   if (cls === 'rice') {
     return (
-      <group ref={root} position={[spot.x, y, spot.z]}>
+      <group ref={root} position={[rx, y, rz]}>
         <group ref={moving}>
           <mesh material={M.plastic}>
             <cylinderGeometry args={[0.17, 0.17, 0.045, 12]} />
@@ -214,7 +235,7 @@ function SpotProp({ spot, item }: PropProps) {
 
   if (cls === 'box') {
     return (
-      <group ref={root} position={[spot.x, y, spot.z]}>
+      <group ref={root} position={[rx, y, rz]}>
         {/* lid hinged at the back edge */}
         <group ref={moving} position={[0, 0.02, -0.22]}>
           <mesh position={[0, 0, 0.22]} material={M.woodDark}>
@@ -234,7 +255,7 @@ function SpotProp({ spot, item }: PropProps) {
   const dh = cls === 'wardrobe' ? 1.5 : cls === 'fridge' ? 1.35 : 0.55;
   const mat = cls === 'fridge' ? M.fridge : M.wood;
   return (
-    <group ref={root} position={[spot.x, y, spot.z]}>
+    <group ref={root} position={[rx, y, rz]}>
       {/* dark cavity behind the door */}
       <mesh position={[0, 0, 0.012]} material={M.cavity}>
         <boxGeometry args={[dw - 0.02, dh - 0.02, 0.02]} />

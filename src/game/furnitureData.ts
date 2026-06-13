@@ -28,6 +28,8 @@ export interface Part {
   s: [number, number, number];
   m: MaterialKey;
   rotY?: number;
+  /** hide this part when the named search-spot's open animation is active */
+  hideForSpot?: string;
 }
 
 export interface ColliderBox {
@@ -70,7 +72,7 @@ export const FURNITURE: FurnitureItem[] = [
     parts: [
       { p: [12.4, 0.74, 12.38], s: [1.6, 0.06, 0.66], m: 'wood' },
       leg(11.66, 12.64, 0.74), leg(13.14, 12.64, 0.74), leg(11.66, 12.1, 0.74), leg(13.14, 12.1, 0.74),
-      { p: [12.85, 0.55, 12.38], s: [0.55, 0.34, 0.6], m: 'woodDark' }, // drawer block
+      { p: [12.85, 0.55, 12.43], s: [0.55, 0.34, 0.50], m: 'woodDark', hideForSpot: 'player_desk' }, // drawer block
       { p: [12.0, 0.95, 12.6], s: [0.5, 0.35, 0.04], m: 'screen' }, // dead monitor
       { p: [12.0, 0.78, 12.55], s: [0.18, 0.07, 0.12], m: 'black' },
     ],
@@ -116,8 +118,8 @@ export const FURNITURE: FurnitureItem[] = [
   {
     id: 'mom_nightstand',
     parts: [
-      { p: [2.75, 0.3, 4.7], s: [0.6, 0.6, 0.55], m: 'wood' },
-      { p: [2.75, 0.42, 4.42], s: [0.5, 0.18, 0.03], m: 'woodDark' },
+      { p: [2.75, 0.3, 4.75], s: [0.6, 0.6, 0.45], m: 'wood' },
+      { p: [2.75, 0.42, 4.42], s: [0.5, 0.18, 0.03], m: 'woodDark', hideForSpot: 'mom_nightstand' },
       { p: [2.75, 0.75, 4.7], s: [0.16, 0.3, 0.16], m: 'plastic', kind: 'cylinder' }, // lamp
     ],
     colliders: [{ p: [2.75, 0.35, 4.7], s: [0.6, 0.7, 0.55] }],
@@ -125,20 +127,20 @@ export const FURNITURE: FurnitureItem[] = [
   {
     id: 'mom_wardrobe',
     parts: [
-      { p: [4.25, 1.05, 4.68], s: [1.25, 2.1, 0.65], m: 'wood' },
-      { p: [3.95, 1.1, 5.03], s: [0.55, 1.9, 0.04], m: 'woodDark' },
-      { p: [4.55, 1.1, 5.03], s: [0.55, 1.9, 0.04], m: 'woodDark' },
+      { p: [4.25, 1.05, 4.62], s: [1.25, 2.1, 0.53], m: 'wood' },
+      { p: [3.95, 1.1, 5.03], s: [0.55, 1.9, 0.04], m: 'woodDark', hideForSpot: 'mom_wardrobe' },
+      { p: [4.55, 1.1, 5.03], s: [0.55, 1.9, 0.04], m: 'woodDark', hideForSpot: 'mom_wardrobe' },
     ],
     colliders: [{ p: [4.25, 1.05, 4.68], s: [1.25, 2.1, 0.65] }],
   },
   {
     id: 'mom_dresser',
     parts: [
-      { p: [1.2, 0.45, 8.6], s: [1.6, 0.9, 0.55], m: 'wood' },
-      { p: [0.9, 0.62, 8.31], s: [0.65, 0.22, 0.03], m: 'woodDark' },
-      { p: [1.7, 0.62, 8.31], s: [0.65, 0.22, 0.03], m: 'woodDark' },
-      { p: [0.9, 0.32, 8.31], s: [0.65, 0.22, 0.03], m: 'woodDark' },
-      { p: [1.7, 0.32, 8.31], s: [0.65, 0.22, 0.03], m: 'woodDark' },
+      { p: [1.2, 0.45, 8.65], s: [1.6, 0.9, 0.45], m: 'wood' },
+      { p: [0.9, 0.62, 8.31], s: [0.65, 0.22, 0.03], m: 'woodDark', hideForSpot: 'mom_dresser1' },
+      { p: [1.7, 0.62, 8.31], s: [0.65, 0.22, 0.03], m: 'woodDark', hideForSpot: 'mom_dresser1' },
+      { p: [0.9, 0.32, 8.31], s: [0.65, 0.22, 0.03], m: 'woodDark', hideForSpot: 'mom_dresser2' },
+      { p: [1.7, 0.32, 8.31], s: [0.65, 0.22, 0.03], m: 'woodDark', hideForSpot: 'mom_dresser2' },
     ],
     colliders: [{ p: [1.2, 0.45, 8.6], s: [1.6, 0.9, 0.55] }],
   },
@@ -147,26 +149,26 @@ export const FURNITURE: FurnitureItem[] = [
   {
     id: 'kitchen_counter',
     parts: [
-      { p: [12.85, 0.45, 0.38], s: [4.2, 0.9, 0.66], m: 'woodDark' },
+      { p: [12.85, 0.45, 0.33], s: [4.2, 0.9, 0.56], m: 'woodDark' },
       { p: [12.85, 0.92, 0.38], s: [4.25, 0.05, 0.7], m: 'black' }, // countertop
       { p: [13.6, 0.93, 0.38], s: [0.55, 0.08, 0.42], m: 'metal' }, // sink
       { p: [13.6, 1.08, 0.16], s: [0.05, 0.25, 0.05], m: 'metal' }, // faucet
       { p: [12.2, 0.96, 0.38], s: [0.6, 0.04, 0.5], m: 'black' }, // stove top
-      // drawers/cabinet fronts
-      { p: [12.3, 0.75, 0.72], s: [0.7, 0.18, 0.03], m: 'wood' },
-      { p: [13.1, 0.75, 0.72], s: [0.7, 0.18, 0.03], m: 'wood' },
-      { p: [12.7, 0.35, 0.72], s: [1.5, 0.55, 0.03], m: 'wood' },
+      // drawers/cabinet fronts — hidden when container opens
+      { p: [12.3, 0.75, 0.72], s: [0.7, 0.18, 0.03], m: 'wood', hideForSpot: 'kitchen_drawer1' },
+      { p: [13.1, 0.75, 0.72], s: [0.7, 0.18, 0.03], m: 'wood', hideForSpot: 'kitchen_drawer2' },
+      { p: [12.7, 0.35, 0.72], s: [1.5, 0.55, 0.03], m: 'wood', hideForSpot: 'kitchen_cab1' },
       // upper cabinets
-      { p: [12.0, 1.8, 0.25], s: [2.4, 0.6, 0.4], m: 'wood' },
+      { p: [12.0, 1.8, 0.2], s: [2.4, 0.6, 0.3], m: 'wood', hideForSpot: 'kitchen_cab2' },
     ],
     colliders: [{ p: [12.85, 0.48, 0.38], s: [4.2, 0.96, 0.7] }],
   },
   {
     id: 'kitchen_fridge',
     parts: [
-      { p: [14.55, 0.95, 1.4], s: [0.78, 1.9, 0.75], m: 'plastic' },
-      { p: [14.14, 1.3, 1.25], s: [0.04, 0.5, 0.06], m: 'metal' }, // handle
-      { p: [14.55, 1.18, 1.4], s: [0.8, 0.02, 0.77], m: 'black' }, // freezer seam
+      { p: [14.62, 0.95, 1.4], s: [0.64, 1.9, 0.75], m: 'plastic' },
+      { p: [14.14, 1.3, 1.25], s: [0.04, 0.5, 0.06], m: 'metal', hideForSpot: 'kitchen_fridge' }, // handle
+      { p: [14.55, 1.18, 1.4], s: [0.8, 0.02, 0.77], m: 'black', hideForSpot: 'kitchen_fridge' }, // freezer seam
     ],
     colliders: [{ p: [14.55, 0.95, 1.4], s: [0.78, 1.9, 0.75] }],
   },
@@ -211,16 +213,16 @@ export const FURNITURE: FurnitureItem[] = [
     parts: [
       { p: [4.0, 0.42, 10.85], s: [1.4, 0.05, 0.7], m: 'wood' },
       leg(3.4, 10.6, 0.42), leg(4.6, 10.6, 0.42), leg(3.4, 11.1, 0.42), leg(4.6, 11.1, 0.42),
-      { p: [4.0, 0.32, 10.85], s: [1.2, 0.12, 0.5], m: 'woodDark' }, // drawer
+      { p: [4.0, 0.32, 10.85], s: [1.2, 0.12, 0.5], m: 'woodDark', hideForSpot: 'living_coffee' }, // drawer
     ],
     colliders: [{ p: [4.0, 0.25, 10.85], s: [1.4, 0.5, 0.7] }],
   },
   {
     id: 'tv_stand',
     parts: [
-      { p: [4.0, 0.28, 9.5], s: [2.4, 0.56, 0.55], m: 'wood' },
-      { p: [3.4, 0.3, 9.78], s: [1.0, 0.35, 0.03], m: 'woodDark' },
-      { p: [4.6, 0.3, 9.78], s: [1.0, 0.35, 0.03], m: 'woodDark' },
+      { p: [4.0, 0.28, 9.45], s: [2.4, 0.56, 0.45], m: 'wood' },
+      { p: [3.4, 0.3, 9.78], s: [1.0, 0.35, 0.03], m: 'woodDark', hideForSpot: 'living_tv' },
+      { p: [4.6, 0.3, 9.78], s: [1.0, 0.35, 0.03], m: 'woodDark', hideForSpot: 'living_tv' },
       { p: [4.0, 1.12, 9.45], s: [1.7, 1.0, 0.07], m: 'screen' }, // TV
     ],
     colliders: [{ p: [4.0, 0.6, 9.5], s: [2.4, 1.6, 0.55] }],
@@ -248,8 +250,8 @@ export const FURNITURE: FurnitureItem[] = [
   {
     id: 'side_cabinet',
     parts: [
-      { p: [7.9, 0.5, 12.55], s: [0.85, 1.0, 0.5], m: 'wood' },
-      { p: [7.9, 0.6, 12.29], s: [0.7, 0.7, 0.03], m: 'woodDark' },
+      { p: [7.9, 0.5, 12.60], s: [0.85, 1.0, 0.40], m: 'wood' },
+      { p: [7.9, 0.6, 12.29], s: [0.7, 0.7, 0.03], m: 'woodDark', hideForSpot: 'living_cabinet' },
     ],
     colliders: [{ p: [7.9, 0.5, 12.55], s: [0.85, 1.0, 0.5] }],
   },
@@ -271,10 +273,10 @@ export const FURNITURE: FurnitureItem[] = [
   {
     id: 'bath_sink',
     parts: [
-      { p: [6.2, 0.42, 0.4], s: [1.0, 0.84, 0.6], m: 'wood' },
+      { p: [6.2, 0.42, 0.35], s: [1.0, 0.84, 0.50], m: 'wood' },
       { p: [6.2, 0.87, 0.4], s: [1.05, 0.06, 0.65], m: 'porcelain' },
       { p: [6.2, 0.92, 0.38], s: [0.5, 0.1, 0.4], m: 'porcelain' },
-      { p: [6.2, 1.6, 0.06], s: [0.7, 0.9, 0.04], m: 'mirror' },
+      { p: [6.2, 1.6, 0.06], s: [0.7, 0.9, 0.04], m: 'mirror', hideForSpot: 'bath_mirror' },
     ],
     colliders: [{ p: [6.2, 0.45, 0.4], s: [1.05, 0.95, 0.65] }],
   },
@@ -382,7 +384,8 @@ export const FURNITURE: FurnitureItem[] = [
   {
     id: 'guest_nightstand',
     parts: [
-      { p: [7.9, 3.15, 0.75], s: [0.6, 0.6, 0.55], m: 'wood' },
+      { p: [7.9, 3.15, 0.70], s: [0.6, 0.6, 0.45], m: 'wood' },
+      { p: [7.9, 3.30, 1.04], s: [0.5, 0.22, 0.03], m: 'woodDark', hideForSpot: 'guest_nightstand' }, // drawer front
       { p: [7.9, 3.75, 0.75], s: [0.14, 0.26, 0.14], m: 'plastic', kind: 'cylinder' }, // dusty lamp
     ],
     colliders: [{ p: [7.9, 3.2, 0.75], s: [0.6, 0.7, 0.55] }],
@@ -390,10 +393,10 @@ export const FURNITURE: FurnitureItem[] = [
   {
     id: 'guest_wardrobe',
     parts: [
-      { p: [10.13, 3.85, 1.0], s: [0.65, 2.0, 1.15], m: 'wood' },
-      { p: [9.79, 3.9, 0.72], s: [0.04, 1.8, 0.5], m: 'woodDark' },
-      { p: [9.79, 3.9, 1.28], s: [0.04, 1.8, 0.5], m: 'woodDark' },
-      { p: [9.77, 3.9, 1.0], s: [0.03, 1.7, 0.03], m: 'metal' },
+      { p: [10.20, 3.85, 1.0], s: [0.50, 2.0, 1.15], m: 'wood' },
+      { p: [9.79, 3.9, 0.72], s: [0.04, 1.8, 0.5], m: 'woodDark', hideForSpot: 'guest_wardrobe' },
+      { p: [9.79, 3.9, 1.28], s: [0.04, 1.8, 0.5], m: 'woodDark', hideForSpot: 'guest_wardrobe' },
+      { p: [9.77, 3.9, 1.0], s: [0.03, 1.7, 0.03], m: 'metal', hideForSpot: 'guest_wardrobe' },
     ],
     colliders: [{ p: [10.13, 3.85, 1.0], s: [0.65, 2.0, 1.15] }],
   },
@@ -409,7 +412,7 @@ export const FURNITURE: FurnitureItem[] = [
     parts: [
       { p: [2.4, 3.59, 0.65], s: [1.7, 0.06, 0.62], m: 'wood' },
       up(leg(1.62, 0.32, 0.74)), up(leg(3.18, 0.32, 0.74)), up(leg(1.62, 0.92, 0.74)), up(leg(3.18, 0.92, 0.74)),
-      { p: [2.9, 3.4, 0.65], s: [0.55, 0.32, 0.56], m: 'woodDark' }, // drawer block
+      { p: [2.9, 3.4, 0.60], s: [0.55, 0.32, 0.46], m: 'woodDark', hideForSpot: 'study_desk' }, // drawer block
       { p: [2.0, 3.73, 0.5], s: [0.4, 0.22, 0.3], m: 'cardboard' }, // dusty papers
       { p: [1.7, 3.66, 0.85], s: [0.25, 0.08, 0.2], m: 'books1' },
     ],
@@ -437,9 +440,9 @@ export const FURNITURE: FurnitureItem[] = [
   {
     id: 'study_cabinet',
     parts: [
-      { p: [4.3, 3.45, 0.65], s: [0.55, 1.2, 0.55], m: 'metal' },
-      { p: [4.3, 3.75, 0.94], s: [0.45, 0.25, 0.03], m: 'black' },
-      { p: [4.3, 3.25, 0.94], s: [0.45, 0.25, 0.03], m: 'black' },
+      { p: [4.3, 3.45, 0.60], s: [0.55, 1.2, 0.45], m: 'metal' },
+      { p: [4.3, 3.75, 0.94], s: [0.45, 0.25, 0.03], m: 'black', hideForSpot: 'study_cabinet' },
+      { p: [4.3, 3.25, 0.94], s: [0.45, 0.25, 0.03], m: 'black', hideForSpot: 'study_cabinet' },
     ],
     colliders: [{ p: [4.3, 3.45, 0.65], s: [0.55, 1.2, 0.55] }],
   },
@@ -458,7 +461,7 @@ export const FURNITURE: FurnitureItem[] = [
       // old sewing machine
       { p: [12.5, 3.78, 0.95], s: [0.55, 0.3, 0.25], m: 'black' },
       { p: [12.3, 3.95, 0.95], s: [0.12, 0.1, 0.2], m: 'black' },
-      { p: [12.5, 3.4, 1.35], s: [0.5, 0.3, 0.04], m: 'woodDark' }, // drawer front
+      { p: [12.5, 3.4, 1.35], s: [0.5, 0.3, 0.04], m: 'woodDark', hideForSpot: 'sewing_drawer' }, // drawer front
     ],
     colliders: [{ p: [12.5, 3.3, 1.0], s: [1.6, 0.9, 0.75] }],
   },
@@ -470,9 +473,9 @@ export const FURNITURE: FurnitureItem[] = [
   {
     id: 'sewing_cabinet',
     parts: [
-      { p: [14.62, 3.85, 3.4], s: [0.65, 2.0, 1.1], m: 'wood' },
-      { p: [14.28, 3.9, 3.13], s: [0.04, 1.8, 0.48], m: 'woodDark' },
-      { p: [14.28, 3.9, 3.67], s: [0.04, 1.8, 0.48], m: 'woodDark' },
+      { p: [14.68, 3.85, 3.4], s: [0.52, 2.0, 1.1], m: 'wood' },
+      { p: [14.28, 3.9, 3.13], s: [0.04, 1.8, 0.48], m: 'woodDark', hideForSpot: 'sewing_cabinet' },
+      { p: [14.28, 3.9, 3.67], s: [0.04, 1.8, 0.48], m: 'woodDark', hideForSpot: 'sewing_cabinet' },
     ],
     colliders: [{ p: [14.62, 3.85, 3.4], s: [0.65, 2.0, 1.1] }],
   },
@@ -555,9 +558,9 @@ export const FURNITURE: FurnitureItem[] = [
   {
     id: 'laundry_washer',
     parts: [
-      { p: [8.2, 3.3, 12.45], s: [0.72, 0.9, 0.68], m: 'plastic' },
-      { p: [8.2, 3.35, 12.1], s: [0.34, 0.04, 0.34], m: 'mirror', kind: 'cylinder', rotY: 0 }, // porthole
-      { p: [8.2, 3.71, 12.3], s: [0.5, 0.06, 0.2], m: 'black' }, // control panel
+      { p: [8.2, 3.3, 12.50], s: [0.72, 0.9, 0.58], m: 'plastic' },
+      { p: [8.2, 3.35, 12.1], s: [0.34, 0.04, 0.34], m: 'mirror', kind: 'cylinder', rotY: 0, hideForSpot: 'laundry_machine' }, // porthole
+      { p: [8.2, 3.71, 12.3], s: [0.5, 0.06, 0.2], m: 'black', hideForSpot: 'laundry_machine' }, // control panel
     ],
     colliders: [{ p: [8.2, 3.3, 12.45], s: [0.72, 0.9, 0.68] }],
   },

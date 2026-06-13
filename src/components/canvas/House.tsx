@@ -450,15 +450,25 @@ function Railings() {
 // ── furniture // ── furniture ───────────────────────────────────────────────────────────────
 
 function PartMesh({ part, mats }: { part: Part; mats: Record<MaterialKey, THREE.Material> }) {
+  const ref = useRef<THREE.Mesh>(null);
+
+  // hide the part when the associated search-spot is being opened
+  useFrame(() => {
+    if (part.hideForSpot && ref.current) {
+      const a = runtime.spotAnim[part.hideForSpot] ?? 0;
+      ref.current.visible = a < 0.01;
+    }
+  });
+
   if (part.kind === 'cylinder') {
     return (
-      <mesh position={part.p} material={mats[part.m]} rotation={[0, part.rotY ?? 0, 0]}>
+      <mesh ref={ref} position={part.p} material={mats[part.m]} rotation={[0, part.rotY ?? 0, 0]}>
         <cylinderGeometry args={[part.s[0], part.s[2] || part.s[0], part.s[1], 12]} />
       </mesh>
     );
   }
   return (
-    <mesh position={part.p} material={mats[part.m]} rotation={[0, part.rotY ?? 0, 0]}>
+    <mesh ref={ref} position={part.p} material={mats[part.m]} rotation={[0, part.rotY ?? 0, 0]}>
       <boxGeometry args={part.s} />
     </mesh>
   );
