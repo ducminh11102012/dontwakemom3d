@@ -113,7 +113,7 @@ function SpotProp({ spot, item }: PropProps) {
 
     const dir = runtime.spotOpenDir[spot.id] ?? [0, 1];
     root.current.rotation.y = Math.atan2(dir[0], dir[1]);
-    const e = 1 - (1 - a) * (1 - a); // ease-out
+    const e = 1 - (1 - a) ** 3; // cubic ease-out — smoother deceleration
 
     const m = moving.current;
     switch (spot.cls) {
@@ -131,10 +131,10 @@ function SpotProp({ spot, item }: PropProps) {
         m.rotation.z = e * 0.55;
         break;
       case 'box':
-        m.rotation.x = -e * 1.5;
+        m.rotation.x = -e * 1.2;  // ~69° — natural box lid open
         break;
       default: // cabinet / wardrobe / fridge doors
-        m.rotation.y = -e * 1.9;
+        m.rotation.y = -e * 1.45; // ~83° — natural door swing
         break;
     }
   });

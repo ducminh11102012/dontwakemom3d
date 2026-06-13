@@ -39,6 +39,8 @@ export interface SearchSpot {
   y: number; // prompt height
   z: number;
   cls: SearchClass;
+  /** fixed opening direction [dx, dz] — which way the container front faces */
+  facing: [number, number];
   tier: PhoneTier;
   /** which floor (default 0) */
   level?: 0 | 1;
@@ -46,57 +48,57 @@ export interface SearchSpot {
 
 export const SEARCH_SPOTS: SearchSpot[] = [
   // ── Mom's bedroom (danger zone) ──
-  { id: 'mom_pillow', label: "Mom's pillow", room: 'momRoom', x: 1.2, y: 0.65, z: 5.0, cls: 'pillow', tier: 1 },
-  { id: 'mom_nightstand', label: 'Nightstand drawer', room: 'momRoom', x: 2.75, y: 0.6, z: 4.75, cls: 'smallDrawer', tier: 1 },
-  { id: 'mom_wardrobe', label: "Mom's wardrobe", room: 'momRoom', x: 4.2, y: 1.1, z: 4.7, cls: 'wardrobe', tier: 2 },
-  { id: 'mom_dresser1', label: 'Dresser drawer', room: 'momRoom', x: 0.9, y: 0.7, z: 8.5, cls: 'largeDrawer', tier: 0 },
-  { id: 'mom_dresser2', label: 'Dresser drawer', room: 'momRoom', x: 1.7, y: 0.5, z: 8.5, cls: 'largeDrawer', tier: 0 },
+  { id: 'mom_pillow', label: "Mom's pillow", room: 'momRoom', x: 1.2, y: 0.65, z: 5.0, cls: 'pillow', facing: [0, 1], tier: 1 },
+  { id: 'mom_nightstand', label: 'Nightstand drawer', room: 'momRoom', x: 2.75, y: 0.6, z: 4.75, cls: 'smallDrawer', facing: [0, -1], tier: 1 },
+  { id: 'mom_wardrobe', label: "Mom's wardrobe", room: 'momRoom', x: 4.2, y: 1.1, z: 4.7, cls: 'wardrobe', facing: [0, 1], tier: 2 },
+  { id: 'mom_dresser1', label: 'Dresser drawer', room: 'momRoom', x: 0.9, y: 0.7, z: 8.5, cls: 'largeDrawer', facing: [0, -1], tier: 0 },
+  { id: 'mom_dresser2', label: 'Dresser drawer', room: 'momRoom', x: 1.7, y: 0.5, z: 8.5, cls: 'largeDrawer', facing: [0, -1], tier: 0 },
   // ── Kitchen ──
-  { id: 'kitchen_fridge', label: 'Fridge', room: 'kitchen', x: 14.6, y: 1.2, z: 1.4, cls: 'fridge', tier: 2 },
-  { id: 'kitchen_rice', label: 'Rice container', room: 'kitchen', x: 11.4, y: 1.0, z: 0.6, cls: 'rice', tier: 3 },
-  { id: 'kitchen_drawer1', label: 'Kitchen drawer', room: 'kitchen', x: 12.3, y: 0.8, z: 0.6, cls: 'smallDrawer', tier: 0 },
-  { id: 'kitchen_drawer2', label: 'Kitchen drawer', room: 'kitchen', x: 13.1, y: 0.8, z: 0.6, cls: 'smallDrawer', tier: 0 },
-  { id: 'kitchen_cab1', label: 'Lower cabinet', room: 'kitchen', x: 12.7, y: 0.4, z: 0.6, cls: 'cabinet', tier: 0 },
-  { id: 'kitchen_cab2', label: 'Upper cabinet', room: 'kitchen', x: 11.9, y: 1.7, z: 0.6, cls: 'cabinet', tier: 0 },
+  { id: 'kitchen_fridge', label: 'Fridge', room: 'kitchen', x: 14.6, y: 1.2, z: 1.4, cls: 'fridge', facing: [-1, 0], tier: 2 },
+  { id: 'kitchen_rice', label: 'Rice container', room: 'kitchen', x: 11.4, y: 1.0, z: 0.6, cls: 'rice', facing: [0, 1], tier: 3 },
+  { id: 'kitchen_drawer1', label: 'Kitchen drawer', room: 'kitchen', x: 12.3, y: 0.8, z: 0.6, cls: 'smallDrawer', facing: [0, 1], tier: 0 },
+  { id: 'kitchen_drawer2', label: 'Kitchen drawer', room: 'kitchen', x: 13.1, y: 0.8, z: 0.6, cls: 'smallDrawer', facing: [0, 1], tier: 0 },
+  { id: 'kitchen_cab1', label: 'Lower cabinet', room: 'kitchen', x: 12.7, y: 0.4, z: 0.6, cls: 'cabinet', facing: [0, 1], tier: 0 },
+  { id: 'kitchen_cab2', label: 'Upper cabinet', room: 'kitchen', x: 11.9, y: 1.7, z: 0.6, cls: 'cabinet', facing: [0, 1], tier: 0 },
   // ── Living room ──
-  { id: 'living_tv', label: 'TV cabinet', room: 'living', x: 4.0, y: 0.45, z: 9.6, cls: 'cabinet', tier: 2 },
-  { id: 'living_shelf', label: 'Bookshelf', room: 'living', x: 0.6, y: 1.2, z: 10.8, cls: 'cabinet', tier: 3 },
-  { id: 'living_coffee', label: 'Coffee table drawer', room: 'living', x: 4.0, y: 0.4, z: 10.9, cls: 'smallDrawer', tier: 0 },
-  { id: 'living_cushions', label: 'Sofa cushions', room: 'living', x: 4.0, y: 0.55, z: 11.9, cls: 'pillow', tier: 0 },
-  { id: 'living_cabinet', label: 'Side cabinet', room: 'living', x: 7.9, y: 0.6, z: 12.5, cls: 'cabinet', tier: 0 },
+  { id: 'living_tv', label: 'TV cabinet', room: 'living', x: 4.0, y: 0.45, z: 9.6, cls: 'cabinet', facing: [0, 1], tier: 2 },
+  { id: 'living_shelf', label: 'Bookshelf', room: 'living', x: 0.6, y: 1.2, z: 10.8, cls: 'cabinet', facing: [1, 0], tier: 3 },
+  { id: 'living_coffee', label: 'Coffee table drawer', room: 'living', x: 4.0, y: 0.4, z: 10.9, cls: 'smallDrawer', facing: [0, 1], tier: 0 },
+  { id: 'living_cushions', label: 'Sofa cushions', room: 'living', x: 4.0, y: 0.55, z: 11.9, cls: 'pillow', facing: [0, -1], tier: 0 },
+  { id: 'living_cabinet', label: 'Side cabinet', room: 'living', x: 7.9, y: 0.6, z: 12.5, cls: 'cabinet', facing: [0, -1], tier: 0 },
   // ── Bathroom ──
-  { id: 'bath_cabinet', label: 'Bathroom cabinet', room: 'bathroom', x: 6.2, y: 0.6, z: 0.7, cls: 'cabinet', tier: 3 },
-  { id: 'bath_mirror', label: 'Mirror cabinet', room: 'bathroom', x: 6.2, y: 1.6, z: 0.45, cls: 'smallDrawer', tier: 0 },
-  { id: 'bath_basket', label: 'Laundry basket', room: 'bathroom', x: 9.9, y: 0.5, z: 0.8, cls: 'box', tier: 0 },
+  { id: 'bath_cabinet', label: 'Bathroom cabinet', room: 'bathroom', x: 6.2, y: 0.6, z: 0.7, cls: 'cabinet', facing: [0, 1], tier: 3 },
+  { id: 'bath_mirror', label: 'Mirror cabinet', room: 'bathroom', x: 6.2, y: 1.6, z: 0.45, cls: 'smallDrawer', facing: [0, 1], tier: 0 },
+  { id: 'bath_basket', label: 'Laundry basket', room: 'bathroom', x: 9.9, y: 0.5, z: 0.8, cls: 'box', facing: [0, 1], tier: 0 },
   // ── Storage room ──
-  { id: 'storage_box', label: 'Storage box', room: 'storage', x: 1.0, y: 0.5, z: 0.8, cls: 'box', tier: 3 },
-  { id: 'storage_basket1', label: 'Wicker basket', room: 'storage', x: 2.2, y: 0.4, z: 0.7, cls: 'box', tier: 0 },
-  { id: 'storage_basket2', label: 'Old crate', room: 'storage', x: 4.3, y: 0.5, z: 3.3, cls: 'box', tier: 0 },
-  { id: 'storage_shelf', label: 'Shelf boxes', room: 'storage', x: 0.5, y: 1.3, z: 2.4, cls: 'cabinet', tier: 0 },
+  { id: 'storage_box', label: 'Storage box', room: 'storage', x: 1.0, y: 0.5, z: 0.8, cls: 'box', facing: [0, 1], tier: 3 },
+  { id: 'storage_basket1', label: 'Wicker basket', room: 'storage', x: 2.2, y: 0.4, z: 0.7, cls: 'box', facing: [0, 1], tier: 0 },
+  { id: 'storage_basket2', label: 'Old crate', room: 'storage', x: 4.3, y: 0.5, z: 3.3, cls: 'box', facing: [0, -1], tier: 0 },
+  { id: 'storage_shelf', label: 'Shelf boxes', room: 'storage', x: 0.5, y: 1.3, z: 2.4, cls: 'cabinet', facing: [1, 0], tier: 0 },
   // ── Player bedroom (fakes only — you'd remember) ──
-  { id: 'player_desk', label: 'Desk drawer', room: 'playerRoom', x: 12.85, y: 0.7, z: 12.05, cls: 'smallDrawer', tier: 0 },
+  { id: 'player_desk', label: 'Desk drawer', room: 'playerRoom', x: 12.85, y: 0.7, z: 12.05, cls: 'smallDrawer', facing: [0, -1], tier: 0 },
 
   // ════ UPSTAIRS (level 1, floor at y=2.85) ════
   // ── Guest bedroom ──
-  { id: 'guest_nightstand', label: 'Guest nightstand', room: 'upGuest', x: 7.9, y: 3.45, z: 0.75, cls: 'smallDrawer', tier: 2, level: 1 },
-  { id: 'guest_wardrobe', label: 'Guest wardrobe', room: 'upGuest', x: 9.7, y: 3.95, z: 1.0, cls: 'wardrobe', tier: 2, level: 1 },
-  { id: 'guest_pillow', label: 'Guest pillow', room: 'upGuest', x: 6.4, y: 3.51, z: 0.75, cls: 'pillow', tier: 0, level: 1 },
+  { id: 'guest_nightstand', label: 'Guest nightstand', room: 'upGuest', x: 7.9, y: 3.45, z: 0.75, cls: 'smallDrawer', facing: [0, 1], tier: 2, level: 1 },
+  { id: 'guest_wardrobe', label: 'Guest wardrobe', room: 'upGuest', x: 9.7, y: 3.95, z: 1.0, cls: 'wardrobe', facing: [-1, 0], tier: 2, level: 1 },
+  { id: 'guest_pillow', label: 'Guest pillow', room: 'upGuest', x: 6.4, y: 3.51, z: 0.75, cls: 'pillow', facing: [0, 1], tier: 0, level: 1 },
   // ── Study ──
-  { id: 'study_desk', label: 'Study desk drawer', room: 'upStudy', x: 2.4, y: 3.55, z: 0.8, cls: 'smallDrawer', tier: 3, level: 1 },
-  { id: 'study_shelf', label: 'Study bookshelf', room: 'upStudy', x: 0.6, y: 4.05, z: 2.2, cls: 'cabinet', tier: 3, level: 1 },
-  { id: 'study_cabinet', label: 'File cabinet', room: 'upStudy', x: 4.3, y: 3.45, z: 0.65, cls: 'cabinet', tier: 0, level: 1 },
+  { id: 'study_desk', label: 'Study desk drawer', room: 'upStudy', x: 2.4, y: 3.55, z: 0.8, cls: 'smallDrawer', facing: [0, 1], tier: 3, level: 1 },
+  { id: 'study_shelf', label: 'Study bookshelf', room: 'upStudy', x: 0.6, y: 4.05, z: 2.2, cls: 'cabinet', facing: [1, 0], tier: 3, level: 1 },
+  { id: 'study_cabinet', label: 'File cabinet', room: 'upStudy', x: 4.3, y: 3.45, z: 0.65, cls: 'cabinet', facing: [0, 1], tier: 0, level: 1 },
   // ── Sewing room ──
-  { id: 'sewing_drawer', label: 'Sewing table drawer', room: 'upSewing', x: 12.5, y: 3.55, z: 1.35, cls: 'smallDrawer', tier: 0, level: 1 },
-  { id: 'sewing_basket', label: 'Sewing basket', room: 'upSewing', x: 14.3, y: 3.25, z: 0.8, cls: 'box', tier: 3, level: 1 },
-  { id: 'sewing_cabinet', label: 'Fabric cabinet', room: 'upSewing', x: 14.4, y: 3.85, z: 3.4, cls: 'cabinet', tier: 2, level: 1 },
+  { id: 'sewing_drawer', label: 'Sewing table drawer', room: 'upSewing', x: 12.5, y: 3.55, z: 1.35, cls: 'smallDrawer', facing: [0, 1], tier: 0, level: 1 },
+  { id: 'sewing_basket', label: 'Sewing basket', room: 'upSewing', x: 14.3, y: 3.25, z: 0.8, cls: 'box', facing: [0, 1], tier: 3, level: 1 },
+  { id: 'sewing_cabinet', label: 'Fabric cabinet', room: 'upSewing', x: 14.4, y: 3.85, z: 3.4, cls: 'cabinet', facing: [-1, 0], tier: 2, level: 1 },
   // ── Junk room ──
-  { id: 'junk_box1', label: 'Dusty box', room: 'upJunk', x: 1.0, y: 3.35, z: 12.3, cls: 'box', tier: 3, level: 1 },
-  { id: 'junk_box2', label: 'Old box', room: 'upJunk', x: 2.4, y: 3.35, z: 12.4, cls: 'box', tier: 0, level: 1 },
-  { id: 'junk_crate', label: 'Wooden crate', room: 'upJunk', x: 6.8, y: 3.35, z: 12.5, cls: 'box', tier: 0, level: 1 },
+  { id: 'junk_box1', label: 'Dusty box', room: 'upJunk', x: 1.0, y: 3.35, z: 12.3, cls: 'box', facing: [0, -1], tier: 3, level: 1 },
+  { id: 'junk_box2', label: 'Old box', room: 'upJunk', x: 2.4, y: 3.35, z: 12.4, cls: 'box', facing: [0, -1], tier: 0, level: 1 },
+  { id: 'junk_crate', label: 'Wooden crate', room: 'upJunk', x: 6.8, y: 3.35, z: 12.5, cls: 'box', facing: [0, -1], tier: 0, level: 1 },
   // ── Laundry room ──
-  { id: 'laundry_machine', label: 'Washing machine', room: 'upLaundry', x: 8.2, y: 3.4, z: 12.2, cls: 'cabinet', tier: 2, level: 1 },
-  { id: 'laundry_shelf', label: 'Laundry shelf', room: 'upLaundry', x: 14.4, y: 3.85, z: 11.5, cls: 'cabinet', tier: 0, level: 1 },
-  { id: 'laundry_pile', label: 'Pile of clothes', room: 'upLaundry', x: 12.5, y: 3.15, z: 12.3, cls: 'pillow', tier: 0, level: 1 },
+  { id: 'laundry_machine', label: 'Washing machine', room: 'upLaundry', x: 8.2, y: 3.4, z: 12.2, cls: 'cabinet', facing: [0, -1], tier: 2, level: 1 },
+  { id: 'laundry_shelf', label: 'Laundry shelf', room: 'upLaundry', x: 14.4, y: 3.85, z: 11.5, cls: 'cabinet', facing: [-1, 0], tier: 0, level: 1 },
+  { id: 'laundry_pile', label: 'Pile of clothes', room: 'upLaundry', x: 12.5, y: 3.15, z: 12.3, cls: 'pillow', facing: [0, -1], tier: 0, level: 1 },
 ];
 
 /** GDD §7 spawn tiers: 20% T1, 40% T2, 40% T3 — then uniform inside the tier. */

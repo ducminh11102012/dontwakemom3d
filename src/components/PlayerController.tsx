@@ -135,11 +135,8 @@ export default function PlayerController() {
         const base = SEARCH_CLASS_DATA[hit.spot.cls];
         const dur = base.time * SEARCH_TIME_FACTOR[store.difficulty];
         searching.current = { id: hit.spot.id, t: 0, dur, isReturn: false };
-        // the container opens toward the player (snapped to the nearest axis)
-        const ox = runtime.playerX - hit.spot.x;
-        const oz = runtime.playerZ - hit.spot.z;
-        runtime.spotOpenDir[hit.spot.id] =
-          Math.abs(ox) > Math.abs(oz) ? [Math.sign(ox) || 1, 0] : [0, Math.sign(oz) || 1];
+        // use the spot's fixed facing direction so the container aligns with its furniture
+        runtime.spotOpenDir[hit.spot.id] = hit.spot.facing;
         // Mom hears the container opening BEFORE it finishes (GDD §8)
         emitNoise(hit.spot.x, hit.spot.z, base.noise, 'search');
         audioEngine.searchRustle(hit.spot.x, hit.spot.z, dur, base.noise);
