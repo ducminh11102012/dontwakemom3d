@@ -1,5 +1,5 @@
 # DON'T WAKE MOM — Game Design Document v2.0
-> **For AI Use**: This is a complete, implementation-ready game design prompt.  
+> This is a complete, implementation-ready game design prompt.  
 > Build this game in **Godot 4**, **GDScript**, **pixel art**, **top-down 2D**.  
 > Follow every section carefully. Where system interactions overlap, prioritize **audio design** above all else.
 
@@ -859,4 +859,3 @@ The game is finished when a player says:
 *Document version: 2.0*  
 *Game: Don't Wake Mom*  
 *Engine: Godot 4 | Genre: Stealth Horror-Comedy | Platform: PC*  
-*Build this game exactly as described. No substitutions.*
