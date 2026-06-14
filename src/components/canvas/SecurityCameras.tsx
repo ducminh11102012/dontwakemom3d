@@ -43,6 +43,8 @@ const DEG = Math.PI / 180;
 /** night-vision boost: feeds render brighter than the (very dark) live view */
 const FEED_EXPOSURE = 2.4;
 const _panTarget = new THREE.Vector3();
+/** reusable vector for viewport save/restore */
+const _savedViewport = new THREE.Vector4();
 
 // ── text labels baked to small canvas textures ───────────────────────────────
 
@@ -266,21 +268,29 @@ export default function SecurityCameras() {
 
   // Re-render the feeds into their off-screen targets. We run at a negative
   // priority so this happens before PostFX's EffectComposer (priority 1) takes
-  // over the render loop. We fully reset the renderer state (autoClear,
-  // scissor, viewport) the composer leaves behind, otherwise the off-screen
-  // passes never actually draw the scene and read back black.
+  // over the render loop. We fully save & restore every piece of renderer
+  // state (render target, viewport, autoClear, scissor, exposure, XR) the
+  // composer touches, so neither pass stomps on the other.
   useFrame((state) => {
     const phase = useGameStore.getState().gamePhase;
     if (phase !== 'playing' && phase !== 'phone') return;
     const { gl, scene } = state;
     const t = state.clock.elapsedTime;
 
+    // ── save ALL renderer state the feed pass touches ──────────────────────
+    const prevRT = gl.getRenderTarget();
+    gl.getViewport(_savedViewport);
     const prevAutoClear = gl.autoClear;
     const prevExposure = gl.toneMappingExposure;
     const prevScissor = gl.getScissorTest();
-    gl.autoClear = true;
+    const prevXR = gl.xr.enabled;
+
+    // ── configure for off-screen feed rendering ───────────────────────────
+    gl.xr.enabled = false;           // XR hooks can redirect setRenderTarget
+    gl.autoClear = false;            // we clear each target ourselves
     gl.setScissorTest(false);
     gl.toneMappingExposure = FEED_EXPOSURE; // brighten feeds (night vision)
+
     // hide the monitors so a camera can never film its own live feed
     // (would be a texture read/write feedback loop)
     const monitors = monitorsRef.current;
@@ -308,16 +318,19 @@ export default function SecurityCameras() {
 
       gl.setRenderTarget(f.rt);
       gl.setViewport(0, 0, FEED_W, FEED_H);
-      gl.clear();
+      gl.clear(true, true, true);    // explicit color + depth + stencil
       gl.render(scene, f.cam);
     }
 
+    // ── restore ALL state so the main scene / EffectComposer is unaffected ─
     if (nvHemiRef.current) nvHemiRef.current.intensity = 0;
     if (nvAmbRef.current) nvAmbRef.current.intensity = 0;
-    gl.setRenderTarget(null);
+    gl.setRenderTarget(prevRT);
+    gl.setViewport(_savedViewport);  // ← fixes Bug 1: viewport was never restored
     gl.setScissorTest(prevScissor);
     gl.autoClear = prevAutoClear;
     gl.toneMappingExposure = prevExposure;
+    gl.xr.enabled = prevXR;
     if (monitors) monitors.visible = true;
   }, -1);
 
