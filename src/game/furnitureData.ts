@@ -428,14 +428,17 @@ export const FURNITURE: FurnitureItem[] = [
     colliders: [{ p: [2.4, 3.35, 1.5], s: [0.5, 1.0, 0.5] }],
   },
   {
+    // low credenza against the west wall — the monitor bank is mounted on the
+    // wall ABOVE it, so this stays short (top ≈ y3.77) to not block the screens
     id: 'study_shelf',
     parts: [
-      { p: [0.55, 3.8, 2.2], s: [0.8, 1.9, 1.7], m: 'wood', rotY: Math.PI / 2 },
-      { p: [0.55, 4.35, 1.9], s: [0.6, 0.35, 0.6], m: 'books2', rotY: Math.PI / 2 },
-      { p: [0.55, 4.35, 2.6], s: [0.6, 0.35, 0.55], m: 'books1', rotY: Math.PI / 2 },
-      { p: [0.55, 3.3, 2.3], s: [0.6, 0.35, 1.2], m: 'books1', rotY: Math.PI / 2 },
+      { p: [0.45, 3.3, 2.2], s: [0.5, 0.9, 1.6], m: 'wood' },
+      { p: [0.45, 3.78, 2.2], s: [0.56, 0.06, 1.7], m: 'woodDark' }, // top surface
+      { p: [0.72, 3.32, 2.2], s: [0.03, 0.5, 1.2], m: 'woodDark', hideForSpot: 'study_shelf' }, // cabinet front
+      { p: [0.5, 3.97, 1.8], s: [0.42, 0.32, 0.4], m: 'books1' }, // box on top
+      { p: [0.5, 3.93, 2.7], s: [0.42, 0.28, 0.45], m: 'books2' },
     ],
-    colliders: [{ p: [0.5, 3.8, 2.2], s: [0.85, 1.9, 1.75] }],
+    colliders: [{ p: [0.45, 3.3, 2.2], s: [0.56, 0.9, 1.7] }],
   },
   {
     id: 'study_cabinet',
