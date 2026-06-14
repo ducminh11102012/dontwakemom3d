@@ -34,7 +34,17 @@ interface Feed {
   def: SecurityCam;
   rt: THREE.WebGLRenderTarget;
   cam: THREE.PerspectiveCamera;
+  /** base look direction (unit) for the panning sweep */
+  baseDir: THREE.Vector3;
+  panAmp: number; // radians
+  panSpeed: number;
+  panPhase: number;
 }
+
+const DEG = Math.PI / 180;
+/** night-vision boost: feeds render brighter than the (very dark) live view */
+const FEED_EXPOSURE = 2.1;
+const _panTarget = new THREE.Vector3();
 
 // ── text labels baked to small canvas textures ───────────────────────────────
 
@@ -120,7 +130,7 @@ function Monitor({
         <meshBasicMaterial
           color="#3bff86"
           transparent
-          opacity={0.1}
+          opacity={0.14}
           blending={THREE.AdditiveBlending}
           depthWrite={false}
         />
@@ -219,7 +229,20 @@ export default function SecurityCameras() {
         const cam = new THREE.PerspectiveCamera(def.fov, FEED_W / FEED_H, 0.1, 45);
         cam.position.set(def.pos[0], def.pos[1], def.pos[2]);
         cam.lookAt(def.look[0], def.look[1], def.look[2]);
-        return { def, rt, cam };
+        const baseDir = new THREE.Vector3(
+          def.look[0] - def.pos[0],
+          def.look[1] - def.pos[1],
+          def.look[2] - def.pos[2],
+        ).normalize();
+        return {
+          def,
+          rt,
+          cam,
+          baseDir,
+          panAmp: (def.panDeg ?? 0) * DEG,
+          panSpeed: def.panSpeed ?? 0,
+          panPhase: def.panPhase ?? 0,
+        };
       }),
     [],
   );
@@ -240,11 +263,31 @@ export default function SecurityCameras() {
     const phase = useGameStore.getState().gamePhase;
     if (phase !== 'playing' && phase !== 'phone') return;
     const { gl, scene } = state;
+
+    // sweep the panning cameras so their blind spots drift around
+    const t = state.clock.elapsedTime;
+    for (const f of feeds) {
+      if (f.panAmp <= 0) continue;
+      const ang = f.panAmp * Math.sin(t * f.panSpeed + f.panPhase);
+      const d = f.baseDir;
+      const cos = Math.cos(ang);
+      const sin = Math.sin(ang);
+      _panTarget.set(
+        f.cam.position.x + d.x * cos + d.z * sin,
+        f.cam.position.y + d.y,
+        f.cam.position.z - d.x * sin + d.z * cos,
+      );
+      f.cam.lookAt(_panTarget);
+      f.cam.updateMatrixWorld();
+    }
+
     const prev = gl.getRenderTarget();
     // PostFX's EffectComposer leaves renderer.autoClear = false, which would
     // make our off-screen renders never clear (→ black feeds). Force it on.
     const prevAutoClear = gl.autoClear;
+    const prevExposure = gl.toneMappingExposure;
     gl.autoClear = true;
+    gl.toneMappingExposure = FEED_EXPOSURE; // brighten feeds (night vision)
     // hide the monitors so a camera can never film its own live feed
     // (would be a texture read/write feedback loop)
     const monitors = monitorsRef.current;
@@ -257,6 +300,7 @@ export default function SecurityCameras() {
     }
     gl.setRenderTarget(prev);
     gl.autoClear = prevAutoClear;
+    gl.toneMappingExposure = prevExposure;
     if (monitors) monitors.visible = true;
   });
 

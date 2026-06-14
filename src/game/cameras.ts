@@ -26,6 +26,12 @@ export interface SecurityCam {
   fov: number;
   level: Level;
   room: RoomId;
+  /** horizontal sweep amplitude in degrees (0 / omitted = fixed camera) */
+  panDeg?: number;
+  /** sweep angular speed (rad/s); period ≈ 2π / panSpeed */
+  panSpeed?: number;
+  /** sweep phase offset so cameras don't move in sync */
+  panPhase?: number;
 }
 
 /** The upstairs room that holds the monitor bank. */
@@ -35,17 +41,18 @@ export const SECURITY_ROOM: RoomId = 'upStudy';
  * Five cameras watching the busiest / most dangerous spaces. Note what is NOT
  * covered: storage, bathroom, the player's own room, and every other upstairs
  * room — all blind. Even watched rooms keep blind corners (e.g. behind the
- * sofa, under the beds).
+ * sofa, under the beds), and the panning ones sweep their blind spot around so
+ * Mom drifts in and out of frame.
  */
 export const SECURITY_CAMS: SecurityCam[] = [
-  // Main artery: the ground-floor hallway + Mom's creaky door.
-  { id: 'cam_hall', label: 'CAM 1 · HALLWAY', pos: [9.9, 2.42, 4.5], look: [5.4, 1.1, 6.6], fov: 60, level: 0, room: 'hallway' },
-  // Living room — but the SE corner (behind the sofa) stays off-frame.
-  { id: 'cam_living', label: 'CAM 2 · LIVING RM', pos: [8.4, 2.42, 12.6], look: [1.5, 0.8, 9.7], fov: 58, level: 0, room: 'living' },
-  // Kitchen down toward the foot of the stairs.
+  // Main artery: the ground-floor hallway + Mom's creaky door. Sweeps.
+  { id: 'cam_hall', label: 'CAM 1 · HALLWAY', pos: [9.9, 2.42, 4.5], look: [5.4, 1.1, 6.6], fov: 60, level: 0, room: 'hallway', panDeg: 20, panSpeed: 0.5, panPhase: 0 },
+  // Living room — but the SE corner (behind the sofa) stays off-frame. Sweeps.
+  { id: 'cam_living', label: 'CAM 2 · LIVING RM', pos: [8.4, 2.42, 12.6], look: [1.5, 0.8, 9.7], fov: 58, level: 0, room: 'living', panDeg: 16, panSpeed: 0.42, panPhase: 1.5 },
+  // Kitchen down toward the foot of the stairs. Fixed stare.
   { id: 'cam_kitchen', label: 'CAM 3 · KITCHEN', pos: [10.9, 2.42, 0.45], look: [14.2, 0.6, 7.6], fov: 56, level: 0, room: 'kitchen' },
-  // Mom's bedroom: watches the bed + nightstand (NOT under the bed).
+  // Mom's bedroom: watches the bed + nightstand (NOT under the bed). Fixed.
   { id: 'cam_mom', label: "CAM 4 · MOM'S RM", pos: [4.7, 2.42, 8.6], look: [1.3, 0.6, 5.0], fov: 54, level: 0, room: 'momRoom' },
-  // Upstairs hallway, the only second-floor camera.
-  { id: 'cam_uphall', label: 'CAM 5 · UPSTAIRS', pos: [0.4, 5.3, 4.95], look: [13.5, 4.1, 8.2], fov: 64, level: 1, room: 'upHall' },
+  // Upstairs hallway, the only second-floor camera. Wide sweep.
+  { id: 'cam_uphall', label: 'CAM 5 · UPSTAIRS', pos: [0.4, 5.3, 4.95], look: [13.5, 4.1, 8.2], fov: 64, level: 1, room: 'upHall', panDeg: 24, panSpeed: 0.6, panPhase: 3.0 },
 ];
