@@ -2,13 +2,22 @@
  * SecurityCameras.tsx — the CCTV system (v1.5).
  *
  * Each security camera owns a small off-screen render target. Every frame we
- * re-render the live scene from a couple of those cameras (round-robin, so the
- * cost is spread out and the feeds get a chunky, low-fps "security cam" feel)
- * and paint the results onto a bank of monitors in the upstairs Security Room.
+ * re-render the live scene from each camera and paint the results onto a bank
+ * of monitors in the upstairs Security Room.
  *
  * Because we render the real scene, Mom — and anything else — shows up on the
  * monitors whenever she steps into a camera's view. The blind spots are
  * physical: narrow FOVs, corner mounts, and rooms with no camera at all.
+ *
+ * v1.6 — comprehensive fix for black-feed bug:
+ *   • @react-three/postprocessing's EffectComposer sets gl.toneMapping =
+ *     NoToneMapping on mount, silently killing the toneMappingExposure boost.
+ *     We now save/restore toneMapping and re-enable ACES during feed render.
+ *   • The postprocessing library's internal passes leave the Three.js WebGL
+ *     state cache stale. We call gl.resetState() before the feed render loop
+ *     to force Three.js to re-apply all GL state.
+ *   • Scene fog is disabled during feed rendering for clearer monitors.
+ *   • Render targets use HalfFloatType for HDR-safe feed rendering.
  */
 
 import { useEffect, useMemo, useRef } from 'react';
@@ -156,9 +165,6 @@ function CamProp({ def }: { def: SecurityCam }) {
   useEffect(() => {
     const g = ref.current;
     if (!g) return;
-    // Aim the lens (built on +Z) at the target. Matrix4.lookAt(eye, target)
-    // gives a -Z look direction, so we swap eye/target to get +Z → target —
-    // computed straight from the literal coords, no reliance on matrixWorld.
     const m = new THREE.Matrix4().lookAt(
       new THREE.Vector3(def.look[0], def.look[1], def.look[2]),
       new THREE.Vector3(def.pos[0], def.pos[1], def.pos[2]),
@@ -222,11 +228,15 @@ export default function SecurityCameras() {
         const rt = new THREE.WebGLRenderTarget(FEED_W, FEED_H, {
           minFilter: THREE.LinearFilter,
           magFilter: THREE.LinearFilter,
+          // HalfFloatType preserves HDR values from the boosted NV lights
+          // instead of clamping to [0,1] before tone mapping can compress them.
+          type: THREE.HalfFloatType,
           depthBuffer: true,
+          stencilBuffer: false,
         });
-        // NOTE: leave the target texture in the default (linear) color space.
-        // Flagging it sRGB made the renderer's output get decoded a second
-        // time on read, crushing the already-dark feeds to pure black.
+        // Leave texture in default (linear) color space — flagging it sRGB
+        // made the renderer decode the already-linear data a second time,
+        // crushing the feeds to black.
         const cam = new THREE.PerspectiveCamera(def.fov, FEED_W / FEED_H, 0.1, 45);
         cam.position.set(def.pos[0], def.pos[1], def.pos[2]);
         cam.lookAt(def.look[0], def.look[1], def.look[2]);
@@ -266,42 +276,63 @@ export default function SecurityCameras() {
     [feeds, noSignal],
   );
 
-  // Re-render the feeds into their off-screen targets. We run at a negative
-  // priority so this happens before PostFX's EffectComposer (priority 1) takes
-  // over the render loop. We fully save & restore every piece of renderer
-  // state (render target, viewport, autoClear, scissor, exposure, XR) the
-  // composer touches, so neither pass stomps on the other.
+  // ── feed rendering ──────────────────────────────────────────────────────
+  //
+  // We run at priority -1 so feeds are ready BEFORE PostFX's EffectComposer
+  // (priority 1) renders the main view that includes the monitor meshes.
+  //
+  // Critical: @react-three/postprocessing v3 sets gl.toneMapping = NoToneMapping
+  // on mount (so it can handle tone mapping via its own effect pass). This
+  // silently kills the toneMappingExposure multiplier in all Three.js shaders.
+  // We must temporarily restore ACES tone mapping for the feed render so the
+  // 2.4× exposure boost actually takes effect.
+  //
+  // The postprocessing library's internal passes can also leave the Three.js
+  // WebGL state cache stale, so we call resetState() before the feed loop to
+  // force full GL state re-application on the next render() call.
+
   useFrame((state) => {
     const phase = useGameStore.getState().gamePhase;
     if (phase !== 'playing' && phase !== 'phone') return;
     const { gl, scene } = state;
     const t = state.clock.elapsedTime;
 
-    // ── save ALL renderer state the feed pass touches ──────────────────────
+    // ── save ALL renderer + scene state ────────────────────────────────────
     const prevRT = gl.getRenderTarget();
     gl.getViewport(_savedViewport);
     const prevAutoClear = gl.autoClear;
     const prevExposure = gl.toneMappingExposure;
     const prevScissor = gl.getScissorTest();
     const prevXR = gl.xr.enabled;
+    const prevToneMapping = gl.toneMapping;   // likely NoToneMapping from EffectComposer
+    const prevFog = scene.fog;                // dark fog crushes distant feeds
+
+    // ── reset stale WebGL state from previous frame's EffectComposer ──────
+    // The postprocessing library's internal passes (RenderPass, CopyPass,
+    // EffectPass) use raw WebGL calls that bypass Three.js's state tracking.
+    // Without this reset, Three.js thinks certain GL state is still set from
+    // ITS last render() call and skips re-applying it, causing the feed
+    // render to silently draw nothing.
+    gl.resetState();
 
     // ── configure for off-screen feed rendering ───────────────────────────
-    gl.xr.enabled = false;           // XR hooks can redirect setRenderTarget
-    gl.autoClear = false;            // we clear each target ourselves
+    gl.xr.enabled = false;
+    gl.autoClear = true;              // let render() handle clear internally
     gl.setScissorTest(false);
-    gl.toneMappingExposure = FEED_EXPOSURE; // brighten feeds (night vision)
+    gl.toneMapping = THREE.ACESFilmicToneMapping;  // re-enable so exposure works
+    gl.toneMappingExposure = FEED_EXPOSURE;
+    scene.fog = null;                 // no fog on CCTV feeds
 
-    // hide the monitors so a camera can never film its own live feed
-    // (would be a texture read/write feedback loop)
+    // hide monitors to avoid render-to-texture feedback loops
     const monitors = monitorsRef.current;
     if (monitors) monitors.visible = false;
+
     // night-vision fill: lit only for the feed render, zeroed before main view
     if (nvHemiRef.current) nvHemiRef.current.intensity = 2.6;
     if (nvAmbRef.current) nvAmbRef.current.intensity = 1.0;
 
     for (const f of feeds) {
-      // aim the (optionally) panning camera, then make sure its matrices are
-      // current before we render through it
+      // aim the (optionally) panning camera
       if (f.panAmp > 0) {
         const ang = f.panAmp * Math.sin(t * f.panSpeed + f.panPhase);
         const d = f.baseDir;
@@ -315,20 +346,22 @@ export default function SecurityCameras() {
         f.cam.lookAt(_panTarget);
       }
       f.cam.updateMatrixWorld(true);
+      f.cam.updateProjectionMatrix();
 
       gl.setRenderTarget(f.rt);
       gl.setViewport(0, 0, FEED_W, FEED_H);
-      gl.clear(true, true, true);    // explicit color + depth + stencil
-      gl.render(scene, f.cam);
+      gl.render(scene, f.cam);       // autoClear handles clear before draw
     }
 
     // ── restore ALL state so the main scene / EffectComposer is unaffected ─
     if (nvHemiRef.current) nvHemiRef.current.intensity = 0;
     if (nvAmbRef.current) nvAmbRef.current.intensity = 0;
+    scene.fog = prevFog;
     gl.setRenderTarget(prevRT);
-    gl.setViewport(_savedViewport);  // ← fixes Bug 1: viewport was never restored
+    gl.setViewport(_savedViewport);
     gl.setScissorTest(prevScissor);
     gl.autoClear = prevAutoClear;
+    gl.toneMapping = prevToneMapping;
     gl.toneMappingExposure = prevExposure;
     gl.xr.enabled = prevXR;
     if (monitors) monitors.visible = true;
