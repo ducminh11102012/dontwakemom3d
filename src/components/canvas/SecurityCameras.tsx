@@ -13,7 +13,7 @@
 
 import { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
-import { useFrame, useThree } from '@react-three/fiber';
+import { useFrame } from '@react-three/fiber';
 import { LEVEL_Y } from '../../game/house';
 import { SECURITY_CAMS, type SecurityCam } from '../../game/cameras';
 import { useGameStore } from '../../state/gameStore';
@@ -189,25 +189,14 @@ function CamProp({ def }: { def: SecurityCam }) {
   );
 }
 
-// ── the console desk the monitors sit above ───────────────────────────────────
+// ── glow cast by the monitor wall (the credenza below is real furniture) ──────
 
-function SecurityDesk() {
+function SecurityGlow() {
   const y0 = LEVEL_Y; // upstairs floor
   return (
     <group>
-      {/* counter top */}
-      <mesh position={[0.55, y0 + 0.78, 1.95]}>
-        <boxGeometry args={[0.7, 0.05, 1.9]} />
-        <meshStandardMaterial color="#2a2018" roughness={0.8} />
-      </mesh>
-      {/* front panel */}
-      <mesh position={[0.88, y0 + 0.4, 1.95]}>
-        <boxGeometry args={[0.04, 0.76, 1.9]} />
-        <meshStandardMaterial color="#221a14" roughness={0.85} />
-      </mesh>
-      {/* glow from the monitor wall */}
-      <pointLight position={[1.1, y0 + 1.5, 1.95]} intensity={1.6} distance={3.4} color="#4affa0" decay={2} />
-      <pointLight position={[1.2, y0 + 1.0, 1.95]} intensity={0.5} distance={2.2} color="#3affa0" decay={2} />
+      <pointLight position={[0.95, y0 + 1.5, 1.95]} intensity={1.8} distance={3.6} color="#4affa0" decay={2} />
+      <pointLight position={[1.0, y0 + 1.1, 2.6]} intensity={0.7} distance={2.4} color="#3affa0" decay={2} />
     </group>
   );
 }
@@ -215,7 +204,6 @@ function SecurityDesk() {
 // ── main ───────────────────────────────────────────────────────────────────
 
 export default function SecurityCameras() {
-  const { gl, scene } = useThree();
   const rr = useRef(0);
   const monitorsRef = useRef<THREE.Group>(null);
 
@@ -248,10 +236,15 @@ export default function SecurityCameras() {
 
   // round-robin re-render of the feeds (default priority → R3F still auto-
   // renders the main view afterwards because we restore the render target).
-  useFrame(() => {
+  useFrame((state) => {
     const phase = useGameStore.getState().gamePhase;
     if (phase !== 'playing' && phase !== 'phone') return;
+    const { gl, scene } = state;
     const prev = gl.getRenderTarget();
+    // PostFX's EffectComposer leaves renderer.autoClear = false, which would
+    // make our off-screen renders never clear (→ black feeds). Force it on.
+    const prevAutoClear = gl.autoClear;
+    gl.autoClear = true;
     // hide the monitors so a camera can never film its own live feed
     // (would be a texture read/write feedback loop)
     const monitors = monitorsRef.current;
@@ -263,6 +256,7 @@ export default function SecurityCameras() {
       gl.render(scene, f.cam);
     }
     gl.setRenderTarget(prev);
+    gl.autoClear = prevAutoClear;
     if (monitors) monitors.visible = true;
   });
 
@@ -278,7 +272,7 @@ export default function SecurityCameras() {
 
   return (
     <group>
-      <SecurityDesk />
+      <SecurityGlow />
       <group ref={monitorsRef}>
         {feeds.map((f, i) => (
           <Monitor key={f.def.id} map={f.rt.texture} z={cells[i].z} y={cells[i].y} label={f.def.label} live />
