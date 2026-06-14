@@ -100,7 +100,7 @@ export const ROOMS: Room[] = [
   { id: 'living', label: 'Living Room', x0: 0, z0: 9, x1: 9, z1: 13, floor: 'carpet', light: 'dim', level: 0 },
   { id: 'playerRoom', label: 'Your Bedroom', x0: 9, z0: 9, x1: 15, z1: 13, floor: 'carpet', light: 'dim', level: 0 },
   // upstairs
-  { id: 'upStudy', label: 'Study', x0: 0, z0: 0, x1: 5, z1: 4.6, floor: 'carpet', light: 'dark', level: 1 },
+  { id: 'upStudy', label: 'Security Room', x0: 0, z0: 0, x1: 5, z1: 4.6, floor: 'carpet', light: 'dark', level: 1 },
   { id: 'upGuest', label: 'Guest Bedroom', x0: 5, z0: 0, x1: 10.5, z1: 4.6, floor: 'carpet', light: 'dim', level: 1 },
   { id: 'upSewing', label: 'Sewing Room', x0: 10.5, z0: 0, x1: 15, z1: 4.6, floor: 'wood', light: 'dark', level: 1 },
   { id: 'upHall', label: 'Upstairs Hallway', x0: 0, z0: 4.6, x1: 15, z1: 9, floor: 'wood', light: 'dim', level: 1 },
