@@ -43,7 +43,7 @@ interface Feed {
 
 const DEG = Math.PI / 180;
 /** night-vision boost: feeds render brighter than the (very dark) live view */
-const FEED_EXPOSURE = 2.1;
+const FEED_EXPOSURE = 2.4;
 const _panTarget = new THREE.Vector3();
 
 // ── text labels baked to small canvas textures ───────────────────────────────
@@ -130,7 +130,7 @@ function Monitor({
         <meshBasicMaterial
           color="#3bff86"
           transparent
-          opacity={0.14}
+          opacity={0.08}
           blending={THREE.AdditiveBlending}
           depthWrite={false}
         />
@@ -249,6 +249,14 @@ export default function SecurityCameras() {
 
   const noSignal = useMemo(() => makeNoSignalTexture(), []);
 
+  // Greenish "IR illuminator" lights that live permanently in the scene at
+  // intensity 0 (so they never affect the real first-person view and never
+  // trigger a shader recompile). We pulse their intensity up only for the
+  // duration of the feed render, so the dark night-time rooms are bright
+  // enough to read on the monitors instead of crushing to black.
+  const nvHemiRef = useRef<THREE.HemisphereLight>(null);
+  const nvAmbRef = useRef<THREE.AmbientLight>(null);
+
   useEffect(
     () => () => {
       feeds.forEach((f) => f.rt.dispose());
@@ -257,33 +265,18 @@ export default function SecurityCameras() {
     [feeds, noSignal],
   );
 
-  // round-robin re-render of the feeds (default priority → R3F still auto-
-  // renders the main view afterwards because we restore the render target).
+  // Re-render the feeds into their off-screen targets. We run at a negative
+  // priority so this happens before PostFX's EffectComposer (priority 1) takes
+  // over the render loop. The composer leaves the renderer in a non-clearing
+  // state, so we drive setRenderTarget + an explicit clear ourselves; without
+  // that the feed targets never get written and read back pure black.
   useFrame((state) => {
     const phase = useGameStore.getState().gamePhase;
     if (phase !== 'playing' && phase !== 'phone') return;
     const { gl, scene } = state;
-
-    // sweep the panning cameras so their blind spots drift around
     const t = state.clock.elapsedTime;
-    for (const f of feeds) {
-      if (f.panAmp <= 0) continue;
-      const ang = f.panAmp * Math.sin(t * f.panSpeed + f.panPhase);
-      const d = f.baseDir;
-      const cos = Math.cos(ang);
-      const sin = Math.sin(ang);
-      _panTarget.set(
-        f.cam.position.x + d.x * cos + d.z * sin,
-        f.cam.position.y + d.y,
-        f.cam.position.z - d.x * sin + d.z * cos,
-      );
-      f.cam.lookAt(_panTarget);
-      f.cam.updateMatrixWorld();
-    }
 
-    const prev = gl.getRenderTarget();
-    // PostFX's EffectComposer leaves renderer.autoClear = false, which would
-    // make our off-screen renders never clear (→ black feeds). Force it on.
+    const prevTarget = gl.getRenderTarget();
     const prevAutoClear = gl.autoClear;
     const prevExposure = gl.toneMappingExposure;
     gl.autoClear = true;
@@ -292,17 +285,43 @@ export default function SecurityCameras() {
     // (would be a texture read/write feedback loop)
     const monitors = monitorsRef.current;
     if (monitors) monitors.visible = false;
+    // night-vision fill: lit only for the feed render, zeroed before main view
+    if (nvHemiRef.current) nvHemiRef.current.intensity = 2.0;
+    if (nvAmbRef.current) nvAmbRef.current.intensity = 0.7;
+
+    // round-robin a couple of feeds per frame for the chunky low-fps CCTV feel
     for (let k = 0; k < FEEDS_PER_FRAME; k++) {
       const f = feeds[rr.current % feeds.length];
       rr.current++;
+
+      // aim the (optionally) panning camera, then make sure its matrices are
+      // current before we render through it
+      if (f.panAmp > 0) {
+        const ang = f.panAmp * Math.sin(t * f.panSpeed + f.panPhase);
+        const d = f.baseDir;
+        const cos = Math.cos(ang);
+        const sin = Math.sin(ang);
+        _panTarget.set(
+          f.cam.position.x + d.x * cos + d.z * sin,
+          f.cam.position.y + d.y,
+          f.cam.position.z - d.x * sin + d.z * cos,
+        );
+        f.cam.lookAt(_panTarget);
+      }
+      f.cam.updateMatrixWorld(true);
+
       gl.setRenderTarget(f.rt);
+      gl.clear();
       gl.render(scene, f.cam);
     }
-    gl.setRenderTarget(prev);
+
+    if (nvHemiRef.current) nvHemiRef.current.intensity = 0;
+    if (nvAmbRef.current) nvAmbRef.current.intensity = 0;
+    gl.setRenderTarget(prevTarget);
     gl.autoClear = prevAutoClear;
     gl.toneMappingExposure = prevExposure;
     if (monitors) monitors.visible = true;
-  });
+  }, -1);
 
   // monitor grid: 5 live feeds fill the first five cells, the 6th is offline
   const cells = [
@@ -316,6 +335,9 @@ export default function SecurityCameras() {
 
   return (
     <group>
+      {/* night-vision fill lights — kept at intensity 0, pulsed during feed render */}
+      <hemisphereLight ref={nvHemiRef} args={['#9bffc4', '#0a1810', 0]} />
+      <ambientLight ref={nvAmbRef} color="#bfffd6" intensity={0} />
       <SecurityGlow />
       <group ref={monitorsRef}>
         {feeds.map((f, i) => (
