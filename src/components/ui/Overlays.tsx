@@ -116,7 +116,7 @@ function Menu() {
 
       <p className="controls-hint">
         WASD move · CTRL sneak quietly · SHIFT run · E interact · F flashlight · B hold breath ·
-        Q listen · R lock door · CLICK fire tranq dart · headphones strongly recommended
+        Q listen · R lock door · H hint · CLICK fire tranq dart · headphones strongly recommended
       </p>
       <p className="controls-hint">
         she roams now. find the brass key → unlock the storage room → crack the safe → tranq gun.

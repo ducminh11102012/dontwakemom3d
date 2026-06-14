@@ -239,7 +239,8 @@ export class MomAI {
     const dist = Math.hypot(dx, dz);
     const walls = blockersBetween(runtime.momX, runtime.momZ, e.x, e.z, runtime.momLevel, e.level);
     const wallMul = Math.pow(MOM_WALL_ATTENUATION, walls);
-    const range = MOM_HEAR_BASE_RANGE * (0.5 + e.intensity) * (HEARING_MUL[runtime.momState] ?? 1);
+    const hintBoost = this.store.momHearingBoost ?? 1;
+    const range = MOM_HEAR_BASE_RANGE * (0.5 + e.intensity) * (HEARING_MUL[runtime.momState] ?? 1) * hintBoost;
     const falloff = Math.max(0, 1 - dist / Math.max(0.1, range));
     const loud = e.intensity * wallMul * falloff;
     if (loud <= 0.01) return;

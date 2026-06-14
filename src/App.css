@@ -418,3 +418,59 @@ html, body, #root, .app-root {
   padding: 4px 0 2px;
   letter-spacing: 0.1em;
 }
+
+/* ── Hint system ──────────────────────────────────────── */
+.hint-hud {
+  position: absolute;
+  bottom: 120px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 12;
+  pointer-events: none;
+}
+.hint-counter {
+  background: rgba(10, 14, 28, 0.8);
+  border: 1px solid #3a4a6a;
+  color: #8fb4ff;
+  padding: 4px 14px;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+.hint-counter.hint-revealed {
+  border-color: #ff5a3a;
+  color: #ff8a6a;
+  background: rgba(40, 10, 10, 0.85);
+  animation: hintDanger 1.5s infinite;
+}
+@keyframes hintDanger {
+  0%, 100% { border-color: #ff5a3a; }
+  50% { border-color: #ff2a1a; box-shadow: 0 0 14px rgba(255, 60, 30, 0.4); }
+}
+
+.hint-popup {
+  position: absolute;
+  bottom: 160px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 13;
+  background: rgba(15, 20, 40, 0.92);
+  border: 1px solid #5a7acc;
+  color: #c8d8ff;
+  padding: 10px 22px;
+  font-size: 14px;
+  max-width: 520px;
+  text-align: center;
+  animation: hintSlideIn 0.3s ease-out;
+  pointer-events: none;
+}
+.hint-popup-danger {
+  border-color: #ff4a2a;
+  color: #ffaa88;
+  background: rgba(40, 12, 8, 0.94);
+  box-shadow: 0 0 30px rgba(255, 60, 30, 0.3);
+}
+@keyframes hintSlideIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(10px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}

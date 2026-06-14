@@ -7,6 +7,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ROOMS } from '../../game/house';
 import { emitNoise, runtime } from '../../game/runtime';
+import { getSpot } from '../../game/spots';
 import { playerLook } from '../../systems/playerLook';
 import { useGameStore } from '../../state/gameStore';
 import { audioEngine } from '../../systems/audio';
@@ -102,6 +103,40 @@ function FloorCanvas({ level, label }: { level: 0 | 1; label: string }) {
         ctx.font = '8px monospace';
         ctx.fillText(r.label.toUpperCase(), r.x0 * S + PAD + 3, r.z0 * S + PAD + 12);
       }
+
+      // phone spot marker (hint revealed or ≥4 hints)
+      const store = useGameStore.getState();
+      if (!store.hasPhone && !store.phoneReturned && store.hintsUsed >= 4) {
+        const phoneSpot = getSpot(store.phoneSpotId);
+        const phoneLevel = phoneSpot.level ?? 0;
+        if (phoneLevel === level) {
+          const px = phoneSpot.x * S + PAD;
+          const pz = phoneSpot.z * S + PAD;
+          const pulse = 0.5 + 0.5 * Math.sin(performance.now() / 300);
+          if (store.hintRevealed) {
+            // full reveal: bright pulsing phone icon
+            ctx.fillStyle = `rgba(255, 220, 50, ${0.6 + pulse * 0.4})`;
+            ctx.beginPath();
+            ctx.arc(px, pz, 4 + pulse * 2, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#ffdd33';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+            ctx.fillStyle = '#000';
+            ctx.font = 'bold 7px monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText('📱', px, pz + 3);
+            ctx.textAlign = 'start';
+          } else {
+            // hints 4-5: subtle marker
+            ctx.fillStyle = `rgba(255, 200, 80, ${0.3 + pulse * 0.3})`;
+            ctx.beginPath();
+            ctx.arc(px, pz, 3, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+      }
+
       // player (only on this level)
       const playerLevel = runtime.playerY > 1.4 ? 1 : 0;
       if (playerLevel === level) {
@@ -178,6 +213,11 @@ export default function HUD() {
   const safeCode = useGameStore((s) => s.safeCode);
   const hasTranqGun = useGameStore((s) => s.hasTranqGun);
   const darts = useGameStore((s) => s.darts);
+  const hintsUsed = useGameStore((s) => s.hintsUsed);
+  const hintRevealed = useGameStore((s) => s.hintRevealed);
+  const hintText = useGameStore((s) => s.hintText);
+  const hasPhone = useGameStore((s) => s.hasPhone);
+  const phoneReturned = useGameStore((s) => s.phoneReturned);
   const autoPlay = useGameStore((s) => s.autoPlay);
   const autoPlayStatus = useGameStore((s) => s.autoPlayStatus);
   const autoPlayEnding = useGameStore((s) => s.autoPlayEnding);
@@ -247,6 +287,28 @@ export default function HUD() {
           </div>
         )}
       </div>
+
+      {/* ── Hint system ──────────────────────────────────────── */}
+      {!hasPhone && !phoneReturned && (
+        <div className="hint-hud">
+          {!hintRevealed && (
+            <div className="hint-counter">
+              H — Hint ({hintsUsed}/5)
+            </div>
+          )}
+          {hintRevealed && (
+            <div className="hint-counter hint-revealed">
+              ⚠️ MẸ THÍNH x1.8
+            </div>
+          )}
+        </div>
+      )}
+      {hintText && (
+        <div className={`hint-popup ${hintRevealed ? 'hint-popup-danger' : ''}`}>
+          {hintText}
+        </div>
+      )}
+
       <Keypad />
       <MapOverlay />
       <CCTVOverlay />

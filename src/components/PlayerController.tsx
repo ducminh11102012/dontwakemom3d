@@ -81,6 +81,7 @@ export default function PlayerController() {
   const prevFlash = useRef(false);
   const prevPeek = useRef(false);
   const prevLock = useRef(false);
+  const prevHint = useRef(false);
   const breathHold = useRef(0);
   const breathCooldown = useRef(0);
   const breathSoundTimer = useRef(0);
@@ -269,10 +270,12 @@ export default function PlayerController() {
           setTimeout(() => useGameStore.getState().setSubtitle(null), 2600);
         }
         handleBreath(input.holdBreath, dt, store, true);
-        store.setPrompt('E — come out · Q — listen · B — hold breath');
+        if (input.hint && !prevHint.current) store.useHint();
+        store.setPrompt('E — come out · Q — listen · B — hold breath · H — hint');
       }
       prevInteract.current = input.interact;
       prevPeek.current = input.peek;
+      prevHint.current = input.hint;
       pushStore(store);
       return;
     }
@@ -497,10 +500,16 @@ export default function PlayerController() {
       store.setPrompt('type the 4-digit code · ESC — step away');
     }
 
+    // hint key (H) — just-pressed trigger
+    if (input.hint && !prevHint.current) {
+      store.useHint();
+    }
+
     prevInteract.current = input.interact;
     prevFlash.current = input.flashlight;
     prevPeek.current = input.peek;
     prevLock.current = input.lock;
+    prevHint.current = input.hint;
 
     // ── flashlight light follows camera ─────────────────────────────────────
     const fl = flashRef.current;

@@ -5,7 +5,8 @@
 
 import { create } from 'zustand';
 import type { MomStateId } from '../game/runtime';
-import { rollItemSpots, rollPhoneSpot } from '../game/spots';
+import { getSpot, rollItemSpots, rollPhoneSpot } from '../game/spots';
+import { ROOMS } from '../game/house';
 import { runtime } from '../game/runtime';
 import { resetPlayerLook } from '../systems/playerLook';
 
@@ -77,6 +78,12 @@ interface GameState {
   finaleTimer: number;
 
 
+  // hints
+  hintsUsed: number;       // 0..5 normal hints used
+  hintRevealed: boolean;   // 6th press = full reveal
+  hintText: string | null; // currently displayed hint message
+  momHearingBoost: number; // 1.0 = normal, >1 after reveal
+
   // auto play
   autoPlay: boolean;
   autoPlayEnding: AutoPlayEnding;
@@ -123,6 +130,8 @@ interface GameState {
   catchPlayer: (line: string) => void;
   finish: (e: EndingId) => void;
   setBathroomLocked: (v: boolean) => void;
+  useHint: () => void;
+  clearHintText: () => void;
   setAutoPlay: (v: boolean) => void;
   setAutoPlayEnding: (e: AutoPlayEnding) => void;
   setAutoPlayStatus: (s: string) => void;
@@ -168,6 +177,11 @@ export const useGameStore = create<GameState>((set, get) => ({
 
   finaleActive: false,
   finaleTimer: 0,
+
+  hintsUsed: 0,
+  hintRevealed: false,
+  hintText: null,
+  momHearingBoost: 1.0,
 
   autoPlay: false,
   autoPlayEnding: 'goodnight' as AutoPlayEnding,
@@ -223,6 +237,10 @@ export const useGameStore = create<GameState>((set, get) => ({
       finaleActive: false,
       finaleTimer: 0,
       autoPlayStatus: '',
+      hintsUsed: 0,
+      hintRevealed: false,
+      hintText: null,
+      momHearingBoost: 1.0,
       prompt: null,
       searchProgress: null,
       subtitle: null,
@@ -320,6 +338,73 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
 
   setBathroomLocked: (bathroomLocked) => set({ bathroomLocked }),
+
+  useHint: () => {
+    const s = get();
+    // only during Act 1 (finding phone) while playing
+    if (s.hasPhone || s.phoneReturned) return;
+    if (s.gamePhase !== 'playing') return;
+    if (s.hintRevealed) return; // already fully revealed
+
+    const spot = getSpot(s.phoneSpotId);
+    const room = ROOMS.find((r) => r.id === spot.room);
+    const roomLabel = room?.label ?? spot.room;
+    const floor = (spot.level ?? 0) === 1 ? 'tầng 2' : 'tầng 1';
+
+    const clsNames: Record<string, string> = {
+      pillow: 'gối / nệm',
+      smallDrawer: 'ngăn kéo nhỏ',
+      largeDrawer: 'ngăn kéo lớn',
+      fridge: 'tủ lạnh',
+      wardrobe: 'tủ quần áo',
+      rice: 'thùng gạo',
+      box: 'hộp / thùng',
+      cabinet: 'tủ',
+    };
+    const clsLabel = clsNames[spot.cls] ?? spot.cls;
+
+    const nextHint = s.hintsUsed + 1;
+
+    if (nextHint <= 5) {
+      let text = '';
+      switch (nextHint) {
+        case 1:
+          text = `💡 Hint 1/5: Điện thoại ở ${floor}`;
+          break;
+        case 2:
+          text = `💡 Hint 2/5: Có vẻ ở trong ${roomLabel}...`;
+          break;
+        case 3:
+          text = `💡 Hint 3/5: Thử tìm trong ${clsLabel}...`;
+          break;
+        case 4:
+          text = `💡 Hint 4/5: "${spot.label}" ở ${roomLabel} — nóng lắm rồi!`;
+          break;
+        case 5:
+          text = `💡 Hint 5/5: CHÍNH XÁC LÀ "${spot.label}" trong ${roomLabel}! Lần sau bấm H = chỉ thẳng luôn...`;
+          break;
+      }
+      set({ hintsUsed: nextHint, hintText: text });
+      // auto-clear hint text after a few seconds
+      setTimeout(() => {
+        if (get().hintText === text) set({ hintText: null });
+      }, nextHint < 5 ? 4000 : 6000);
+    } else {
+      // 6th press — full reveal + Mom "thính" penalty
+      const text = `⚠️ BẤT LỰC! Điện thoại ở "${spot.label}" trong ${roomLabel} (${floor}). Mẹ THÍNH hơn rồi đó!`;
+      set({
+        hintRevealed: true,
+        hintText: text,
+        momHearingBoost: 1.8,
+      });
+      setTimeout(() => {
+        if (get().hintText === text) set({ hintText: null });
+      }, 8000);
+    }
+  },
+
+  clearHintText: () => set({ hintText: null }),
+
   setAutoPlay: (autoPlay) => set({ autoPlay }),
   setAutoPlayEnding: (autoPlayEnding) => set({ autoPlayEnding }),
   setAutoPlayStatus: (autoPlayStatus) => set({ autoPlayStatus }),

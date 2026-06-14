@@ -33,6 +33,7 @@ export interface InputState {
   holdBreath: boolean;
   peek: boolean;
   lock: boolean;
+  hint: boolean;
 }
 
 const createInitialState = (): InputState => ({
@@ -47,6 +48,7 @@ const createInitialState = (): InputState => ({
   holdBreath: false,
   peek: false,
   lock: false,
+  hint: false,
 });
 
 /** Maps KeyboardEvent.code → InputState field. */
@@ -69,6 +71,7 @@ const KEY_BINDINGS: Record<string, keyof InputState> = {
   KeyB: 'holdBreath',
   KeyQ: 'peek',
   KeyR: 'lock',
+  KeyH: 'hint',
 };
 
 export function useInput() {
