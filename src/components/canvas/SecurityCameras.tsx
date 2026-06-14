@@ -20,8 +20,6 @@ import { useGameStore } from '../../state/gameStore';
 
 const FEED_W = 256;
 const FEED_H = 192;
-/** how many feeds to refresh per frame (spreads GPU cost, low-fps CCTV look) */
-const FEEDS_PER_FRAME = 2;
 
 // ── monitor bank layout (west wall of the upstairs Security Room) ────────────
 const WALL_X = 0.24; // just proud of the exterior wall at x=0
@@ -214,7 +212,6 @@ function SecurityGlow() {
 // ── main ───────────────────────────────────────────────────────────────────
 
 export default function SecurityCameras() {
-  const rr = useRef(0);
   const monitorsRef = useRef<THREE.Group>(null);
 
   const feeds = useMemo<Feed[]>(
@@ -225,7 +222,9 @@ export default function SecurityCameras() {
           magFilter: THREE.LinearFilter,
           depthBuffer: true,
         });
-        rt.texture.colorSpace = THREE.SRGBColorSpace;
+        // NOTE: leave the target texture in the default (linear) color space.
+        // Flagging it sRGB made the renderer's output get decoded a second
+        // time on read, crushing the already-dark feeds to pure black.
         const cam = new THREE.PerspectiveCamera(def.fov, FEED_W / FEED_H, 0.1, 45);
         cam.position.set(def.pos[0], def.pos[1], def.pos[2]);
         cam.lookAt(def.look[0], def.look[1], def.look[2]);
@@ -267,33 +266,30 @@ export default function SecurityCameras() {
 
   // Re-render the feeds into their off-screen targets. We run at a negative
   // priority so this happens before PostFX's EffectComposer (priority 1) takes
-  // over the render loop. The composer leaves the renderer in a non-clearing
-  // state, so we drive setRenderTarget + an explicit clear ourselves; without
-  // that the feed targets never get written and read back pure black.
+  // over the render loop. We fully reset the renderer state (autoClear,
+  // scissor, viewport) the composer leaves behind, otherwise the off-screen
+  // passes never actually draw the scene and read back black.
   useFrame((state) => {
     const phase = useGameStore.getState().gamePhase;
     if (phase !== 'playing' && phase !== 'phone') return;
     const { gl, scene } = state;
     const t = state.clock.elapsedTime;
 
-    const prevTarget = gl.getRenderTarget();
     const prevAutoClear = gl.autoClear;
     const prevExposure = gl.toneMappingExposure;
+    const prevScissor = gl.getScissorTest();
     gl.autoClear = true;
+    gl.setScissorTest(false);
     gl.toneMappingExposure = FEED_EXPOSURE; // brighten feeds (night vision)
     // hide the monitors so a camera can never film its own live feed
     // (would be a texture read/write feedback loop)
     const monitors = monitorsRef.current;
     if (monitors) monitors.visible = false;
     // night-vision fill: lit only for the feed render, zeroed before main view
-    if (nvHemiRef.current) nvHemiRef.current.intensity = 2.0;
-    if (nvAmbRef.current) nvAmbRef.current.intensity = 0.7;
+    if (nvHemiRef.current) nvHemiRef.current.intensity = 2.6;
+    if (nvAmbRef.current) nvAmbRef.current.intensity = 1.0;
 
-    // round-robin a couple of feeds per frame for the chunky low-fps CCTV feel
-    for (let k = 0; k < FEEDS_PER_FRAME; k++) {
-      const f = feeds[rr.current % feeds.length];
-      rr.current++;
-
+    for (const f of feeds) {
       // aim the (optionally) panning camera, then make sure its matrices are
       // current before we render through it
       if (f.panAmp > 0) {
@@ -311,13 +307,15 @@ export default function SecurityCameras() {
       f.cam.updateMatrixWorld(true);
 
       gl.setRenderTarget(f.rt);
+      gl.setViewport(0, 0, FEED_W, FEED_H);
       gl.clear();
       gl.render(scene, f.cam);
     }
 
     if (nvHemiRef.current) nvHemiRef.current.intensity = 0;
     if (nvAmbRef.current) nvAmbRef.current.intensity = 0;
-    gl.setRenderTarget(prevTarget);
+    gl.setRenderTarget(null);
+    gl.setScissorTest(prevScissor);
     gl.autoClear = prevAutoClear;
     gl.toneMappingExposure = prevExposure;
     if (monitors) monitors.visible = true;
