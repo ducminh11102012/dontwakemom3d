@@ -267,3 +267,154 @@ html, body, #root, .app-root {
   75% { translate: 4px 4px; }
   100% { translate: -5px -3px; }
 }
+
+/* ── Auto Play ────────────────────────────────────────── */
+.auto-play-toggle {
+  margin-top: 16px;
+  font-family: inherit;
+  font-size: 14px;
+  padding: 10px 22px;
+  background: rgba(20, 30, 50, 0.8);
+  color: var(--dim);
+  border: 1px solid #2c3354;
+  cursor: pointer;
+  letter-spacing: 0.08em;
+  transition: all 0.2s;
+}
+.auto-play-toggle:hover {
+  border-color: #6a82b0;
+  color: var(--ink);
+  background: rgba(30, 40, 60, 0.9);
+}
+
+.auto-play-picker {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: min(480px, 92vw);
+}
+.auto-play-title {
+  color: var(--dim);
+  font-size: 14px;
+  letter-spacing: 0.1em;
+  margin-bottom: 4px;
+}
+.auto-ending-btn {
+  background: #0d1020;
+  border: 1px solid #262b4a;
+  color: var(--ink);
+  padding: 10px 16px;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  transition: border-color 0.15s, background 0.15s;
+}
+.auto-ending-btn:hover { border-color: #6a82b0; background: #131a33; }
+.auto-ending-btn strong { font-size: 14px; }
+.auto-ending-btn span { color: var(--dim); font-size: 12px; }
+.auto-play-cancel {
+  background: none;
+  border: 1px solid #262b4a;
+  color: var(--dim);
+  font-family: inherit;
+  padding: 6px 14px;
+  cursor: pointer;
+  margin-top: 4px;
+  font-size: 12px;
+}
+.auto-play-cancel:hover { border-color: #6a82b0; color: var(--ink); }
+
+/* Auto play HUD indicator */
+.auto-play-indicator {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 15;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  pointer-events: none;
+}
+.auto-play-badge {
+  background: rgba(20, 80, 40, 0.85);
+  border: 1px solid #2a8a4a;
+  padding: 5px 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  animation: botpulse 2s infinite;
+}
+@keyframes botpulse {
+  0%, 100% { border-color: #2a8a4a; }
+  50% { border-color: #4afa7a; box-shadow: 0 0 12px rgba(74, 250, 122, 0.3); }
+}
+.auto-play-icon { font-size: 16px; }
+.auto-play-label {
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  color: #8affa8;
+  font-weight: bold;
+}
+.auto-play-ending-label {
+  font-size: 10px;
+  color: var(--dim);
+  padding: 2px 8px;
+  background: rgba(8, 10, 20, 0.7);
+}
+.auto-play-status {
+  font-size: 11px;
+  color: #aac;
+  background: rgba(8, 10, 20, 0.75);
+  padding: 3px 8px;
+  max-width: 260px;
+  text-align: right;
+}
+
+/* ── CCTV Overlay ─────────────────────────────────────── */
+.cctv-overlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 14;
+  background: rgba(0, 8, 2, 0.92);
+  border: 2px solid #1a4a2a;
+  padding: 8px;
+  box-shadow: 0 0 40px rgba(0, 100, 30, 0.3);
+  pointer-events: none;
+}
+.cctv-header {
+  text-align: center;
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  color: #0aaa0a;
+  padding: 4px 0 6px;
+  border-bottom: 1px solid #0a3a0a;
+  margin-bottom: 6px;
+}
+.cctv-status {
+  margin-left: 12px;
+  color: #4afa4a;
+  animation: pulse 1.5s infinite;
+}
+.cctv-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+}
+.cctv-feed {
+  border: 1px solid #0a3a0a;
+  image-rendering: pixelated;
+}
+.cctv-footer {
+  text-align: center;
+  font-size: 9px;
+  color: #0a6a0a;
+  padding: 4px 0 2px;
+  letter-spacing: 0.1em;
+}

@@ -11,6 +11,7 @@ import { playerLook } from '../../systems/playerLook';
 import { useGameStore } from '../../state/gameStore';
 import { audioEngine } from '../../systems/audio';
 import { SAFE_POS, SAFE_WRONG_CODE_NOISE } from '../../constants';
+import CCTVOverlay from './CCTVOverlay';
 
 /** Safe keypad — type the 4-digit code (kbd only; the pointer stays locked). */
 function Keypad() {
@@ -177,6 +178,9 @@ export default function HUD() {
   const safeCode = useGameStore((s) => s.safeCode);
   const hasTranqGun = useGameStore((s) => s.hasTranqGun);
   const darts = useGameStore((s) => s.darts);
+  const autoPlay = useGameStore((s) => s.autoPlay);
+  const autoPlayStatus = useGameStore((s) => s.autoPlayStatus);
+  const autoPlayEnding = useGameStore((s) => s.autoPlayEnding);
 
   if (gamePhase !== 'playing' && gamePhase !== 'phone') return null;
 
@@ -245,6 +249,21 @@ export default function HUD() {
       </div>
       <Keypad />
       <MapOverlay />
+      <CCTVOverlay />
+      {autoPlay && (
+        <div className="auto-play-indicator">
+          <div className="auto-play-badge">
+            <span className="auto-play-icon">🤖</span>
+            <span className="auto-play-label">BOT PLAYING</span>
+          </div>
+          <div className="auto-play-ending-label">
+            Target: {autoPlayEnding === 'goodnight' ? '🌙 Good Night' : autoPlayEnding === 'coward' ? '🐔 Coward' : '👻 Waiting Kind'}
+          </div>
+          {autoPlayStatus && (
+            <div className="auto-play-status">{autoPlayStatus}</div>
+          )}
+        </div>
+      )}
     </>
   );
 }

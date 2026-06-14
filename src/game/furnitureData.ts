@@ -406,42 +406,84 @@ export const FURNITURE: FurnitureItem[] = [
     colliders: [],
   },
 
-  // ════ STUDY (x 0–5, z 0–4.6) ════
+  // ════ CCTV ROOM (x 0–5, z 0–4.6) — was Study ════
   {
-    id: 'study_desk',
+    // Main CCTV console desk against the north wall
+    id: 'cctv_desk',
     parts: [
-      { p: [2.4, 3.59, 0.65], s: [1.7, 0.06, 0.62], m: 'wood' },
-      up(leg(1.62, 0.32, 0.74)), up(leg(3.18, 0.32, 0.74)), up(leg(1.62, 0.92, 0.74)), up(leg(3.18, 0.92, 0.74)),
-      { p: [2.9, 3.4, 0.60], s: [0.55, 0.32, 0.46], m: 'woodDark', hideForSpot: 'study_desk' }, // drawer block
-      { p: [2.0, 3.73, 0.5], s: [0.4, 0.22, 0.3], m: 'cardboard' }, // dusty papers
-      { p: [1.7, 3.66, 0.85], s: [0.25, 0.08, 0.2], m: 'books1' },
+      // desk surface
+      { p: [2.5, 3.59, 0.65], s: [3.6, 0.06, 0.72], m: 'woodDark' },
+      // desk legs
+      up(leg(0.78, 0.32, 0.74)), up(leg(4.22, 0.32, 0.74)),
+      up(leg(0.78, 0.92, 0.74)), up(leg(4.22, 0.92, 0.74)),
+      // desk panel (front face)
+      { p: [2.5, 3.22, 1.0], s: [3.6, 0.68, 0.04], m: 'woodDark' },
+      // drawer block
+      { p: [3.8, 3.4, 0.60], s: [0.55, 0.32, 0.46], m: 'woodDark', hideForSpot: 'study_desk' },
     ],
-    colliders: [{ p: [2.4, 3.3, 0.65], s: [1.7, 0.9, 0.66] }],
+    colliders: [{ p: [2.5, 3.3, 0.65], s: [3.6, 0.9, 0.72] }],
   },
   {
-    id: 'study_chair',
+    // Three CCTV monitors on the desk
+    id: 'cctv_monitors',
     parts: [
-      { p: [2.4, 3.3, 1.5], s: [0.45, 0.06, 0.45], m: 'fabricWine' },
-      { p: [2.4, 3.07, 1.5], s: [0.07, 0.45, 0.07], m: 'metal', kind: 'cylinder' },
-      { p: [2.4, 3.6, 1.72], s: [0.45, 0.55, 0.07], m: 'fabricWine' },
+      // Left monitor (frame + screen)
+      { p: [1.2, 4.1, 0.45], s: [1.05, 0.75, 0.06], m: 'black' },   // frame
+      { p: [1.2, 4.1, 0.41], s: [0.92, 0.62, 0.02], m: 'screen' },   // screen
+      { p: [1.2, 3.68, 0.50], s: [0.35, 0.12, 0.22], m: 'black' },   // stand base
+      { p: [1.2, 3.72, 0.48], s: [0.06, 0.08, 0.04], m: 'metal' },   // stand neck
+      // Center monitor (larger — main view)
+      { p: [2.5, 4.15, 0.42], s: [1.2, 0.85, 0.06], m: 'black' },    // frame
+      { p: [2.5, 4.15, 0.38], s: [1.06, 0.72, 0.02], m: 'screen' },  // screen
+      { p: [2.5, 3.68, 0.48], s: [0.40, 0.12, 0.24], m: 'black' },   // stand base
+      { p: [2.5, 3.72, 0.46], s: [0.06, 0.08, 0.04], m: 'metal' },   // stand neck
+      // Right monitor
+      { p: [3.8, 4.1, 0.45], s: [1.05, 0.75, 0.06], m: 'black' },    // frame
+      { p: [3.8, 4.1, 0.41], s: [0.92, 0.62, 0.02], m: 'screen' },   // screen
+      { p: [3.8, 3.68, 0.50], s: [0.35, 0.12, 0.22], m: 'black' },   // stand base
+      { p: [3.8, 3.72, 0.48], s: [0.06, 0.08, 0.04], m: 'metal' },   // stand neck
     ],
-    colliders: [{ p: [2.4, 3.35, 1.5], s: [0.5, 1.0, 0.5] }],
+    colliders: [],
   },
   {
-    // low credenza against the west wall — the monitor bank is mounted on the
-    // wall ABOVE it, so this stays short (top ≈ y3.77) to not block the screens
-    id: 'study_shelf',
+    // CCTV monitor green status LEDs (emissive glow)
+    id: 'cctv_leds',
     parts: [
-      { p: [0.45, 3.3, 2.2], s: [0.5, 0.9, 1.6], m: 'wood' },
-      { p: [0.45, 3.78, 2.2], s: [0.56, 0.06, 1.7], m: 'woodDark' }, // top surface
-      { p: [0.72, 3.32, 2.2], s: [0.03, 0.5, 1.2], m: 'woodDark', hideForSpot: 'study_shelf' }, // cabinet front
-      { p: [0.5, 3.97, 1.8], s: [0.42, 0.32, 0.4], m: 'books1' }, // box on top
-      { p: [0.5, 3.93, 2.7], s: [0.42, 0.28, 0.45], m: 'books2' },
+      { p: [1.2, 3.72, 0.39], s: [0.04, 0.04, 0.02], m: 'screen' },
+      { p: [2.5, 3.72, 0.37], s: [0.04, 0.04, 0.02], m: 'screen' },
+      { p: [3.8, 3.72, 0.39], s: [0.04, 0.04, 0.02], m: 'screen' },
     ],
-    colliders: [{ p: [0.45, 3.3, 2.2], s: [0.56, 0.9, 1.7] }],
+    colliders: [],
   },
   {
-    id: 'study_cabinet',
+    // Swivel chair
+    id: 'cctv_chair',
+    parts: [
+      { p: [2.5, 3.3, 1.7], s: [0.48, 0.06, 0.48], m: 'fabricWine' },
+      { p: [2.5, 3.07, 1.7], s: [0.07, 0.45, 0.07], m: 'metal', kind: 'cylinder' },
+      { p: [2.5, 3.62, 1.92], s: [0.48, 0.58, 0.07], m: 'fabricWine' },
+    ],
+    colliders: [{ p: [2.5, 3.35, 1.7], s: [0.5, 1.0, 0.5] }],
+  },
+  {
+    // Server rack / equipment against the west wall
+    id: 'cctv_rack',
+    parts: [
+      // rack frame
+      { p: [0.5, 3.8, 2.5], s: [0.65, 1.9, 1.3], m: 'metal' },
+      // rack units (blinking equipment)
+      { p: [0.85, 4.35, 2.2], s: [0.02, 0.12, 0.8], m: 'screen' },
+      { p: [0.85, 4.05, 2.2], s: [0.02, 0.12, 0.8], m: 'screen' },
+      { p: [0.85, 3.75, 2.5], s: [0.02, 0.12, 0.8], m: 'black' },
+      { p: [0.85, 3.45, 2.5], s: [0.02, 0.12, 0.8], m: 'black' },
+      // cables at the bottom
+      { p: [0.4, 2.95, 2.8], s: [0.35, 0.15, 0.25], m: 'black' },
+    ],
+    colliders: [{ p: [0.5, 3.8, 2.5], s: [0.7, 1.9, 1.35] }],
+  },
+  {
+    // File cabinet (searchable) — reuses study_cabinet spot id
+    id: 'cctv_cabinet',
     parts: [
       { p: [4.3, 3.45, 0.60], s: [0.55, 1.2, 0.45], m: 'metal' },
       { p: [4.3, 3.75, 0.94], s: [0.45, 0.25, 0.03], m: 'black', hideForSpot: 'study_cabinet' },
@@ -450,8 +492,21 @@ export const FURNITURE: FurnitureItem[] = [
     colliders: [{ p: [4.3, 3.45, 0.65], s: [0.55, 1.2, 0.55] }],
   },
   {
-    id: 'study_rug',
-    parts: [{ p: [2.5, 2.862, 2.6], s: [2.4, 0.02, 1.6], m: 'fabricBlue' }],
+    // Small side table with recording equipment
+    id: 'cctv_side_table',
+    parts: [
+      { p: [4.3, 3.3, 3.5], s: [0.65, 0.9, 0.6], m: 'wood' },
+      // VCR / DVR unit
+      { p: [4.3, 3.82, 3.5], s: [0.55, 0.12, 0.45], m: 'black' },
+      // small red recording LED
+      { p: [4.55, 3.9, 3.25], s: [0.03, 0.03, 0.02], m: 'screen' },
+    ],
+    colliders: [{ p: [4.3, 3.3, 3.5], s: [0.65, 0.9, 0.6] }],
+  },
+  {
+    // Dark carpet / anti-fatigue mat
+    id: 'cctv_rug',
+    parts: [{ p: [2.5, 2.862, 1.8], s: [2.8, 0.02, 1.4], m: 'black' }],
     colliders: [],
   },
 

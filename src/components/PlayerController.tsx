@@ -55,6 +55,7 @@ import { useGameStore } from '../state/gameStore';
 import { useInput } from '../systems/useInput';
 import { playerLook } from '../systems/playerLook';
 import { audioEngine } from '../systems/audio';
+import { updateAutoPlay, botInput } from '../game/autoPlay';
 
 const STAND_EYE = PLAYER_HEIGHT - PLAYER_CAMERA_OFFSET;
 const CROUCH_EYE = PLAYER_CROUCH_HEIGHT - PLAYER_CAMERA_OFFSET;
@@ -222,8 +223,10 @@ export default function PlayerController() {
     const body = bodyRef.current;
     if (!body) return;
     const dt = Math.min(delta, 1 / 20);
-    const input = inputRef.current;
     const store = useGameStore.getState();
+    // Auto play: run bot AI and use its input instead of keyboard
+    if (store.autoPlay) updateAutoPlay(dt);
+    const input = store.autoPlay ? botInput : inputRef.current;
     const playing = store.gamePhase === 'playing';
     const now = performance.now() / 1000;
 

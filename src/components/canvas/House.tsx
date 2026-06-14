@@ -948,8 +948,9 @@ function Lights() {
       {/* Stairwell — eerie glow */}
       <pointLight position={[14.4, 3.4, 6.8]} intensity={1.8} distance={4.5} color="#4a5870" decay={2} />
 
-      {/* Study — dark */}
-      <pointLight position={[2.5, 5.15, 2.3]} intensity={0.8} distance={3.5} color="#3a3530" decay={2} />
+      {/* CCTV Room — eerie green monitor glow */}
+      <pointLight position={[2.5, 5.15, 1.2]} intensity={2.5} distance={4.5} color="#1a4a2a" decay={2} />
+      <pointLight position={[2.5, 3.85, 0.5]} intensity={1.8} distance={3.0} color="#2a6a3a" decay={2} />
 
       {/* Sewing — dark */}
       <pointLight position={[12.75, 5.15, 2.3]} intensity={0.8} distance={3.5} color="#3a3530" decay={2} />
@@ -1084,6 +1085,60 @@ function Outlets() {
   );
 }
 
+// ── CCTV monitor glow (emissive screens) ────────────────────────────────────
+
+function CCTVMonitorGlow() {
+  const ref = useRef<THREE.Group>(null);
+  // Animate a subtle flicker
+  useFrame(({ clock }) => {
+    if (!ref.current) return;
+    const t = clock.getElapsedTime();
+    const flicker = 0.7 + 0.3 * Math.sin(t * 2.3) * Math.sin(t * 5.7);
+    ref.current.children.forEach((c) => {
+      if (c instanceof THREE.Mesh && c.material) {
+        (c.material as THREE.MeshStandardMaterial).emissiveIntensity = flicker;
+      }
+    });
+  });
+
+  const monitorScreens = [
+    { p: [1.2, 4.1, 0.38] as [number, number, number], s: [0.88, 0.58] as [number, number] },   // left
+    { p: [2.5, 4.15, 0.35] as [number, number, number], s: [1.02, 0.68] as [number, number] },  // center
+    { p: [3.8, 4.1, 0.38] as [number, number, number], s: [0.88, 0.58] as [number, number] },   // right
+  ];
+
+  return (
+    <group ref={ref}>
+      {monitorScreens.map((m, i) => (
+        <mesh key={i} position={m.p}>
+          <planeGeometry args={m.s} />
+          <meshStandardMaterial
+            color="#0a2a12"
+            emissive="#1a5a2a"
+            emissiveIntensity={0.8}
+            roughness={0.2}
+            metalness={0.3}
+          />
+        </mesh>
+      ))}
+      {/* server rack LEDs */}
+      <mesh position={[0.87, 4.35, 2.2]}>
+        <boxGeometry args={[0.01, 0.06, 0.5]} />
+        <meshStandardMaterial color="#0a3a0a" emissive="#2aaa3a" emissiveIntensity={1.5} />
+      </mesh>
+      <mesh position={[0.87, 4.05, 2.2]}>
+        <boxGeometry args={[0.01, 0.06, 0.5]} />
+        <meshStandardMaterial color="#3a0a0a" emissive="#aa2a2a" emissiveIntensity={1.2} />
+      </mesh>
+      {/* DVR recording LED */}
+      <mesh position={[4.57, 3.9, 3.23]}>
+        <sphereGeometry args={[0.025, 6, 6]} />
+        <meshStandardMaterial color="#ff0000" emissive="#ff2020" emissiveIntensity={2.0} />
+      </mesh>
+    </group>
+  );
+}
+
 // ── main export ─────────────────────────────────────────────────────────────
 
 export default function House() {
@@ -1114,6 +1169,7 @@ export default function House() {
       <WindowPane position={[0.02, 4.35, 11]} rotY={Math.PI / 2} />
       <WindowPane position={[14.98, 4.35, 11]} rotY={-Math.PI / 2} w={1.2} h={1.0} />
       <Lights />
+      <CCTVMonitorGlow />
     </group>
   );
 }

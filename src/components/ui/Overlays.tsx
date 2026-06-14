@@ -4,13 +4,14 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
-import { useGameStore, type Difficulty, type EndingId } from '../../state/gameStore';
+import { useGameStore, type AutoPlayEnding, type Difficulty, type EndingId } from '../../state/gameStore';
 import {
   JUMPSCARE_FACE_SECONDS,
   JUMPSCARE_SCREAM_SECONDS,
   REPLY_COUNTDOWN,
 } from '../../constants';
 import { audioEngine } from '../../systems/audio';
+import { resetAutoPlay } from '../../game/autoPlay';
 
 // ── menu ────────────────────────────────────────────────────────────────────
 
@@ -20,10 +21,29 @@ const DIFFS: { id: Difficulty; name: string; desc: string }[] = [
   { id: 'hard', name: 'HARD — “She Knows”', desc: 'No map. No warnings. She remembers. She pretends.' },
 ];
 
+const AUTO_ENDINGS: { id: AutoPlayEnding; name: string; desc: string }[] = [
+  { id: 'goodnight', name: '🌙 Good Night', desc: 'Find phone, reply, return, bed. The perfect run.' },
+  { id: 'coward', name: '🐔 The Coward', desc: 'Find phone, skip reply, return, bed. Play it safe.' },
+  { id: 'waiting', name: '👻 The Waiting Kind', desc: "Secret ending. Hide under Mom's bed." },
+];
+
 function Menu() {
   const difficulty = useGameStore((s) => s.difficulty);
   const setDifficulty = useGameStore((s) => s.setDifficulty);
   const startRun = useGameStore((s) => s.startRun);
+  const setAutoPlay = useGameStore((s) => s.setAutoPlay);
+  const setAutoPlayEnding = useGameStore((s) => s.setAutoPlayEnding);
+  const [showAutoPlay, setShowAutoPlay] = useState(false);
+
+  const handleAutoPlay = (ending: AutoPlayEnding) => {
+    audioEngine.init();
+    audioEngine.uiBeep(740, 0.05);
+    setAutoPlayEnding(ending);
+    setAutoPlay(true);
+    resetAutoPlay();
+    startRun();
+  };
+
   return (
     <div className="overlay menu">
       <h1 className="title">
@@ -51,11 +71,49 @@ function Menu() {
         onClick={() => {
           audioEngine.init();
           audioEngine.uiBeep(740, 0.05);
+          setAutoPlay(false);
           startRun();
         }}
       >
         SNEAK OUT
       </button>
+
+      {!showAutoPlay ? (
+        <button
+          className="auto-play-toggle"
+          onClick={() => {
+            setShowAutoPlay(true);
+            audioEngine.init();
+            audioEngine.uiBeep(440, 0.04);
+          }}
+        >
+          🤖 Not sure? Watch the bot play it
+        </button>
+      ) : (
+        <div className="auto-play-picker">
+          <p className="auto-play-title">Choose an ending to watch:</p>
+          {AUTO_ENDINGS.map((e) => (
+            <button
+              key={e.id}
+              className="auto-ending-btn"
+              onClick={() => handleAutoPlay(e.id)}
+            >
+              <strong>{e.name}</strong>
+              <span>{e.desc}</span>
+            </button>
+          ))}
+          <button
+            className="auto-play-cancel"
+            onClick={() => {
+              setShowAutoPlay(false);
+              audioEngine.uiBeep(320, 0.03);
+            }}
+          >
+            ← back
+          </button>
+        </div>
+      )}
+
       <p className="controls-hint">
         WASD move · CTRL sneak quietly · SHIFT run · E interact · F flashlight · B hold breath ·
         Q listen · R lock door · CLICK fire tranq dart · headphones strongly recommended

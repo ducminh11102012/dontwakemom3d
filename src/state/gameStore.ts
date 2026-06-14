@@ -25,6 +25,7 @@ export type GamePhase =
 export type Difficulty = 'easy' | 'normal' | 'hard';
 export type Act = 1 | 2 | 3;
 export type EndingId = 'goodnight' | 'coward' | 'caught' | 'waiting' | null;
+export type AutoPlayEnding = 'goodnight' | 'coward' | 'waiting';
 
 export interface Notification {
   id: number;
@@ -76,6 +77,11 @@ interface GameState {
   finaleTimer: number;
 
 
+  // auto play
+  autoPlay: boolean;
+  autoPlayEnding: AutoPlayEnding;
+  autoPlayStatus: string;
+
   // UI
   prompt: string | null;
   searchProgress: number | null; // 0..1 while searching
@@ -117,6 +123,9 @@ interface GameState {
   catchPlayer: (line: string) => void;
   finish: (e: EndingId) => void;
   setBathroomLocked: (v: boolean) => void;
+  setAutoPlay: (v: boolean) => void;
+  setAutoPlayEnding: (e: AutoPlayEnding) => void;
+  setAutoPlayStatus: (s: string) => void;
 }
 
 let notifId = 0;
@@ -160,6 +169,9 @@ export const useGameStore = create<GameState>((set, get) => ({
   finaleActive: false,
   finaleTimer: 0,
 
+  autoPlay: false,
+  autoPlayEnding: 'goodnight' as AutoPlayEnding,
+  autoPlayStatus: '',
 
   prompt: null,
   searchProgress: null,
@@ -210,7 +222,8 @@ export const useGameStore = create<GameState>((set, get) => ({
       momAwakeEver: false,
       finaleActive: false,
       finaleTimer: 0,
-          prompt: null,
+      autoPlayStatus: '',
+      prompt: null,
       searchProgress: null,
       subtitle: null,
       notifications: [],
@@ -307,4 +320,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
 
   setBathroomLocked: (bathroomLocked) => set({ bathroomLocked }),
+  setAutoPlay: (autoPlay) => set({ autoPlay }),
+  setAutoPlayEnding: (autoPlayEnding) => set({ autoPlayEnding }),
+  setAutoPlayStatus: (autoPlayStatus) => set({ autoPlayStatus }),
 }));
