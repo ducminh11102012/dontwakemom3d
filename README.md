@@ -12,7 +12,7 @@ A first-person 3D stealth horror-comedy built with **Three.js** (React Three Fib
 ### The House
 - **Two-story house** (15 × 13 m) with 13 rooms across 2 floors
   - **Ground floor (7 rooms):** Player Bedroom, Living Room, Kitchen, Hallway, Mom's Bedroom, Bathroom, Storage Room
-  - **Upstairs (6 rooms):** Study, Guest Bedroom, Sewing Room, Upstairs Hallway, Junk Room, Laundry Room
+  - **Upstairs (6 rooms):** Security Room, Guest Bedroom, Sewing Room, Upstairs Hallway, Junk Room, Laundry Room
 - Staircase connecting Kitchen ↔ Upstairs Hallway
 - Doors (some lockable, Mom's door *always* creaks), archways, fully procedural textures
 - Granny-style visual upgrade: baseboards, door frames, crown molding, wainscoting
@@ -24,6 +24,13 @@ A first-person 3D stealth horror-comedy built with **Three.js** (React Three Fib
 - Doorway pause: randomly stops in doorways for 5–10 seconds
 - Memory system (Hard Mode): remembers where noises came from
 - Positional audio: broom taps reveal her location — until they stop
+
+### CCTV Security Cameras
+- **Security Room upstairs** (former Study) with a 6-screen monitor bank
+- **5 live camera feeds** — real render-to-texture views of the house (Hallway, Living Room, Kitchen/stairs, Mom's Room, Upstairs Hallway)
+- Mom appears on a monitor whenever she walks into a camera's view — but coverage is **deliberately incomplete**: narrow corner-mounted lenses, blind corners (behind the sofa, under beds), and most rooms have no camera at all
+- Chunky low-fps "security cam" refresh; the 6th screen reads **NO SIGNAL**
+- Physical cameras with red LEDs are mounted in the watched rooms
 
 ### Gameplay Systems
 - Sound propagation per floor type (carpet / tile / wood), wall attenuation

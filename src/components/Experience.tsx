@@ -6,6 +6,7 @@ import { Suspense } from 'react';
 import { Physics } from '@react-three/rapier';
 import House from './canvas/House';
 import Mom from './canvas/Mom';
+import SecurityCameras from './canvas/SecurityCameras';
 import PlayerController from './PlayerController';
 import PlayerCamera from './PlayerCamera';
 import PostFX from './PostFX';
@@ -28,6 +29,7 @@ export default function Experience() {
           <PlayerController />
         </Physics>
       </Suspense>
+      <SecurityCameras />
       <PlayerCamera />
       <Director />
       <PostFX />
