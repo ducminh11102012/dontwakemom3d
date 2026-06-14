@@ -1,7 +1,7 @@
-# DON'T WAKE MOM — Game Design Document v2.1
-> **Implementation-ready design document** for the 3D first-person version.  
-> Built with **Three.js** (React Three Fiber + Rapier), **TypeScript**, **Vite**.  
-> Follow every section carefully. Where system interactions overlap, prioritize **audio design** above all else.
+# DON'T WAKE MOM 3D — Game Design Document v2.1
+> Updated to reflect the live **3D first-person** implementation.
+> Built with **React Three Fiber**, **Rapier physics**, **TypeScript** — runs in the browser.
+> All assets are 100% code-generated (procedural textures, geometry). No external models/samples.
 
 ---
 
@@ -10,8 +10,8 @@
 ## ═══════════════════════════════
 
 ### Elevator Pitch
-A **stealth horror-comedy** game where the only monster is your own mother.  
-No weapons (well, one tranquilizer gun). No jump scares (well, one).  
+A **stealth horror-comedy** game where the only monster is your own mother.
+No weapons. No combat. One jumpscare.
 Only **sound, silence, and the crushing anxiety** of a teenager who just wants to check their phone at 2:00 AM.
 
 ### Core Emotional Loop
@@ -24,8 +24,8 @@ Every 30 seconds the player should feel:
 - *"Was that noise her?"*
 - *"Why did she go quiet?"*
 
-> **Design Rule #1**: Silence is scarier than any sound.  
-> **Design Rule #2**: The fear of being caught must always feel worse than actually being caught.  
+> **Design Rule #1**: Silence is scarier than any sound.
+> **Design Rule #2**: The fear of being caught must always feel worse than actually being caught.
 > **Design Rule #3**: The player should feel *guilty* — not just scared.
 
 ---
@@ -37,11 +37,11 @@ Every 30 seconds the player should feel:
 ### Setup
 **Time**: 2:07 AM. The house is dark. Everyone should be asleep.
 
-Earlier tonight, Mom discovered your phone on the kitchen table — unlocked, mid-conversation.  
+Earlier tonight, Mom discovered your phone on the kitchen table — unlocked, mid-conversation.
 She didn't say anything. She just *took it*.
 
-You lay in bed staring at the ceiling.  
-Your best friend sent you a string of messages and you never responded.  
+You lay in bed staring at the ceiling.
+Your best friend sent you a string of messages and you never responded.
 By now they've probably seen that you've been ignoring them.
 
 You can't sleep.
@@ -50,20 +50,19 @@ You decide: *one quick reply. That's all. Then back to bed.*
 
 ### Act Structure
 
-**ACT 1 — The Search**  
-Player leaves their room and searches both floors for the phone.  
-Mom is asleep (or is she?).  
-House is quiet. Player learns the two-story layout, the sounds, the dangers.  
-Along the way: find a brass key, a safe code note, and maybe a tranquilizer gun.
+**ACT 1 — The Search**
+Player leaves their room and tries to locate the phone.
+Mom is asleep (or is she?).
+House is quiet. Player learns the layout, the sounds, the dangers.
 
-**ACT 2 — The Reply**  
-Phone found. A 5-second window to reply.  
-The moment the message sends — the phone buzzes.  
+**ACT 2 — The Reply**
+Phone found. A 5-second window to reply.
+The moment the message sends — the phone buzzes.
 Loud. The whole house shudders.
 
-**ACT 3 — The Escape**  
-Mom is awake. She *knows*.  
-10 seconds to put the phone back, get to bed, and pretend nothing happened.  
+**ACT 3 — The Escape**
+Mom is awake. She *knows*.
+10 seconds to put the phone back, get to bed, and pretend nothing happened.
 This is the hardest stretch of the entire game.
 
 ### Tone
@@ -76,12 +75,10 @@ Think: *"Home Alone" + "Alien: Isolation"* — but the alien is a middle-aged wo
 ## ═══════════════════════
 
 ### The Player (The Kid)
-- Age: ~15-16
-- No name (preserve universality)
-- Wears pajamas
+- First-person perspective — you never see yourself
 - Moves in four modes: Walk, Crouch, Sprint, Hide
-- Has no way to fight back — except one **tranquilizer gun** (Granny-style)
-- Health: Not tracked. One catch = Game Over (with jumpscare).
+- Has no way to fight back — can only **evade, wait, and hide** (except the tranquilizer gun)
+- One catch = Game Over (jumpscare)
 
 ### The Mother (The Threat)
 - AI-controlled. Never static.
@@ -89,12 +86,11 @@ Think: *"Home Alone" + "Alien: Isolation"* — but the alien is a middle-aged wo
 - Moves at **variable speeds** — slow and deliberate when patrolling, frighteningly fast when chasing
 - Does NOT run in a straight line during chase. She *anticipates* where you'll go.
 - Speaks in short, devastating phrases when she catches you
-- Patrols **both floors** — uses the staircase to move between levels
 - Her greatest weapon: **unpredictability**
 
-> **CRITICAL DESIGN NOTE**:  
-> Mom should sometimes *fake* going back to sleep.  
-> She may enter her bedroom, go silent, and wait — hoping the player relaxes and moves again.  
+> **CRITICAL DESIGN NOTE**:
+> Mom should sometimes *fake* going back to sleep.
+> She may enter her bedroom, go silent, and wait — hoping the player relaxes and moves again.
 > This is the most terrifying thing she can do.
 
 ---
@@ -107,34 +103,32 @@ Think: *"Home Alone" + "Alien: Isolation"* — but the alien is a middle-aged wo
 
 | Mode    | Speed (m/s) | Noise Level | Stamina Use | Trigger         |
 |---------|-------------|-------------|-------------|-----------------|
-| Walk    | 2.20        | Low         | None        | Default         |
-| Crouch  | 1.32        | Very Low    | None        | Hold CTRL/C     |
+| Walk    | 2.2         | Low         | None        | Default (WASD)  |
+| Crouch  | 1.32        | Very Low    | None        | Hold CTRL / C   |
 | Sprint  | 3.96        | **HIGH**    | 10/sec      | Hold SHIFT      |
-| Hide    | 0           | None        | None        | Press E at spot |
+| Hide    | 0           | None        | None        | Press E at hiding spot |
 
 ### Stamina System *(Normal + Hard only)*
 - Max: 100
 - Running drains: 10/sec
 - Recovery (stationary or walking): 15/sec
 - **At 0 stamina**:
-  - Player stumbles (2 s slowdown at 0.9 m/s)
-  - Audible heavy breathing (4 s) that **cannot be suppressed** (noise intensity 0.7)
+  - Player stumbles (2 s slowdown to 0.9 m/s)
+  - Audible heavy breathing (intensity 0.7) for 4 s — **cannot be suppressed**
   - This breathing can wake Mom from across the house
   - Punishes reckless sprinting
 
 ### Noise Footprint System
 Each surface type generates different footstep sound levels:
 
-| Floor Type    | Walk Noise | Crouch Noise | Notes                          |
-|---------------|------------|--------------|--------------------------------|
-| Carpet        | 0.20       | 0.05         | Safe to walk on                |
-| Tile          | 0.40       | 0.12         | Crouch recommended             |
-| Wood          | 0.45       | 0.15         | Every step audible             |
-| Sprint (any)  | 0.80       | —            | Always loud                    |
+| Floor Type       | Walk Noise | Crouch Noise | Notes                          |
+|------------------|------------|--------------|--------------------------------|
+| Carpet           | 0.20       | 0.05         | Safe to walk on                |
+| Tile (kitchen/bath) | 0.40    | 0.12         | Crouch recommended             |
+| Wood (hallway)   | 0.45       | 0.15         | Every step audible             |
+| Sprint (any)     | 0.80       | —            | Always dangerous               |
 
-> **Implementation**: Every footstep fires a noise event with intensity = movement mode × floor type.  
-> Mom's AI reacts to this via hearing range check with wall attenuation.  
-> Footstep stride: 0.72 m per step, interval scaled by speed.
+Noise is emitted per footstep (stride length 0.72 m). Mom's AI picks up these signals via a hearing range check with wall attenuation (×0.38 per wall).
 
 ---
 
@@ -143,49 +137,44 @@ Each surface type generates different footstep sound levels:
 ## ══════════════════════════
 
 ### The Heartbeat Meter
-An internal value from **0 to 100** representing the player's anxiety.
-
-```
-0 ──────────────────────────────────── 100
-Calm                              Full Panic
-```
+An internal value from **0 to 100** that represents the player's anxiety.
 
 ### Triggers (Increases Stress)
 
-| Event                         | Stress Added     |
-|-------------------------------|------------------|
-| Mom within ~9 m               | +15/sec          |
-| Mom in same room              | +30/sec          |
-| Mom looks toward player       | +50 (instant)    |
-| Chase begins                  | → 100 (instant)  |
-| Silence / fake sleep          | +10/sec          |
-| Phone buzzes (Act 2)          | +60 (instant)    |
+| Event                           | Stress Added   |
+|---------------------------------|----------------|
+| Mom within ~9 m (near)          | +15/sec        |
+| Mom in same room                | +30/sec        |
+| Mom looks toward player         | +50 (instant)  |
+| Chase begins                    | → 100 (instant)|
+| Silence after sound (fake sleep)| +10/sec        |
+| Phone buzzes (Act 2)            | +60 (instant)  |
 
 ### Triggers (Decreases Stress)
 
 | Event                           | Stress Removed |
 |---------------------------------|----------------|
-| Mom far away / sleeping         | -5/sec         |
-| Player hiding                   | -8/sec         |
-| Player in own bedroom           | -12/sec        |
-| Hold-breath mechanic            | -20 (manual)   |
+| Mom far away / sleeping         | −5/sec         |
+| Player hiding                   | −8/sec         |
+| Player in own bedroom           | −12/sec        |
+| Hold-breath mechanic            | −20 (manual)   |
 
 ### Visual / Audio Effects by Stress Level
 
 | Level | Effect                                                        |
 |-------|---------------------------------------------------------------|
 | 0–20  | No effect                                                     |
-| 21–40 | Faint heartbeat sound begins (low, distant)                   |
-| 41–60 | Heartbeat louder. Screen edges pulse subtly (dark vignette)   |
+| 21–40 | Faint heartbeat sound begins                                  |
+| 41–60 | Heartbeat louder. Screen edges darken (vignette)              |
 | 61–80 | Heavy breathing. Vignette deepens. UI elements tremble        |
-| 81–99 | Screen blurs. Heartbeat overwhelming. Audio muffles slightly  |
-| 100   | **PANIC STATE** — Screen shakes. Vision nearly black. Must hide or it's Game Over |
+| 81–99 | Screen blurs. Heartbeat overwhelming. Audio muffles           |
+| 100   | **PANIC STATE** — Screen shakes. Vision nearly black          |
 
 ### Hold-Breath Mechanic
-Press and hold **B** to manually suppress stress by -20.  
-- Can only be used when **hiding or stationary**  
-- Takes 2 seconds to activate  
-- Plays a deliberate exhale sound (very quiet)  
+Press and hold **B** to manually suppress stress by −20.
+- Can only be used when **hiding or stationary**
+- Takes 2 seconds to activate
+- Plays a deliberate exhale sound (very quiet)
 - Cooldown: 15 seconds
 
 ---
@@ -194,9 +183,9 @@ Press and hold **B** to manually suppress stress by -20.
 ## SECTION 6 — HOUSE DESIGN
 ## ═══════════════════════
 
-The house is a **two-story** building (15 m × 13 m footprint, Y-up coordinate system).
+Two-story house: 15 m × 13 m footprint, wall height 2.6 m per floor.
 
-### Ground Floor (Level 0)
+### Ground Floor (level 0)
 
 ```
 ┌──────────┬─────────────┬──────────┐ z=0
@@ -210,7 +199,7 @@ The house is a **two-story** building (15 m × 13 m footprint, Y-up coordinate s
 x=0        x=5     x=9  x=10.5      x=15
 ```
 
-### Upstairs (Level 1, floor at y = 2.85 m)
+### Upstairs (level 1, floor at y = 2.85 m)
 
 ```
 ┌──────────┬─────────────┬──────────┐ z=0
@@ -225,111 +214,91 @@ x=0                x=7.5            x=15
 
 ### Staircase
 - Runs along the kitchen's east wall
-- Bottom at (14.4, z=8.0, y=0); top at (14.4, z=5.0, y=2.85)
+- Bottom at z = 8.0, top at z = 5.0 (rising to y = 2.85)
 - Stairwell hole in upstairs slab: x 13.8–15, z 4.69–7.9
 
 ### Room Details
 
-#### Ground Floor
-
-**Player Bedroom** *(Spawn + Safe Zone, carpet)*
-- Bed (get in bed — counts for endings)
-- Hide under bed
+**Player Bedroom** *(Spawn + Safe Zone)*
+- Bed (hiding spot: "Get in bed" — counts as being in bed for Good Night ending)
+- Desk (key item: flashlight spawns here)
 - Wardrobe (hiding spot)
-- Desk with drawer (fake search spot) + flashlight
-- Door to hallway (starts open)
-- Archway to Living Room
+- Window (ambient noise: crickets)
+- Door to hallway
+- *Note: no "hide under bed" here — player's own bed only has "Get in bed"*
 
-**Mom's Bedroom** *(Danger Zone — Priority 1, carpet)*
+**Mother's Bedroom** *(Danger Zone — Priority 1)*
 - Mom sleeps here at game start
-- **The door creaks** when opened. Always.
-- Nightstand drawer (Tier 1 phone spot)
-- Under pillow (Tier 1 phone spot — highest risk)
-- Wardrobe (Tier 2 phone spot)
-- Dresser drawers (fake search spots)
-- Under the bed (hiding spot — for the secret ending)
+- Nightstand drawer (Tier 1 phone location)
+- Under pillow (Tier 1 phone location — highest risk)
+- Wardrobe (Tier 2 phone location)
+- Dresser drawers (fake targets)
+- Hiding spot: under Mom's bed (extreme risk — used for secret ending)
+- **The door creaks** when opened. Always. (intensity 0.45)
 
-**Kitchen** *(Medium Danger, tile)*
-- Fridge (Tier 2 phone spot, hum covers noise)
-- Rice container (Tier 3 phone spot)
-- Drawers + cabinets (fake spots)
-- Staircase to upstairs in SE corner
+**Kitchen** *(Medium Danger)*
+- Fridge (Tier 2 phone location, hum covers search noise)
+- Rice container (Tier 3 phone location)
+- Counter drawers (fake targets)
+- Tile floor = loud footsteps, crouch recommended
+- Staircase exit in southeast corner
 
-**Hallway** *(Transition Zone — Most Dangerous, wood floor)*
-- Every step audible
+**Living Room** *(Medium Danger)*
+- TV cabinet (Tier 2 phone location)
+- Bookshelf (Tier 3 phone location)
+- Drawers / side tables (fake targets)
+- Hiding spots: behind sofa, behind curtains
+- Carpet floor — safest for movement
+
+**Bathroom** *(Occasional Danger)*
+- Cabinet (Tier 3 phone location)
+- Door has a lock (player can lock from inside — buys 10 seconds during chase)
+- Hiding spot: behind shower curtain
+- Sink drip ambient noise
+
+**Hallway** *(Transition Zone — Most Dangerous)*
+- Wood floor — every step audible
 - No hiding spots
-- Connects: Mom's Room, Bathroom, Kitchen, Living Room, Player Room
+- Connects all ground-floor rooms
+- Mom's door is directly off this hallway
 
-**Living Room** *(Medium Danger, carpet)*
-- TV cabinet (Tier 2 phone spot)
-- Bookshelf (Tier 3 phone spot)
-- Coffee table drawer, sofa cushions, side cabinet (fakes)
-- Behind the sofa (hiding spot)
-- Behind the curtains (hiding spot)
+**Storage Room** *(Low Danger, locked)*
+- Requires brass key to enter
+- Boxes, shelving units (fake targets + Tier 3 locations)
+- Safe (lockbox) at position (4.5, 0.42, 0.62) — holds tranquilizer gun
+- Very dark — flashlight recommended
+- Hiding spot: inside the big box
 
-**Bathroom** *(tile)*
-- Cabinet (Tier 3 phone spot)
-- Mirror cabinet, laundry basket (fakes)
-- Door has a lock (buys 10 seconds in a chase)
-- Shower curtain (hiding spot)
+**Study** *(Upstairs)*
+- Desk drawers, bookshelf (Tier 2–3 locations)
+- Dark room
 
-**Storage Room** *(Low Danger, wood, dark)*
-- **Locked** — requires the brass key
-- Storage box (Tier 3 phone spot)
-- Wicker basket, old crate, shelf boxes (fakes)
-- Big box (hiding spot)
-- **Safe** (code-locked, holds the tranquilizer gun)
+**Guest Bedroom** *(Upstairs)*
+- Nightstand, wardrobe, dresser (search spots)
+- Hiding spots: under guest bed, in guest wardrobe
 
-#### Upstairs
+**Sewing Room** *(Upstairs)*
+- Sewing cabinet, basket (search spots)
+- Dark, cramped
 
-**Study** *(dark, carpet)*
-- Desk drawer (Tier 3 phone spot)
-- Bookshelf (Tier 3 phone spot)
-- File cabinet (fake)
+**Upstairs Hallway** *(Upstairs transition)*
+- Connects all upstairs rooms to stairwell
+- Console table (fake target)
 
-**Guest Bedroom** *(dim, carpet)*
-- Guest nightstand (Tier 2 phone spot)
-- Guest wardrobe (Tier 2 phone spot)
-- Guest pillow (fake)
-- Under the guest bed (hiding spot)
-- Inside guest wardrobe (hiding spot)
+**Junk Room** *(Upstairs)*
+- Old boxes, toolbox, trunk (search spots)
+- Hiding spot: under dust sheet
 
-**Sewing Room** *(dark, wood)*
-- Door creaks when opened
-- Sewing table drawer (fake)
-- Sewing basket (Tier 3 phone spot)
-- Fabric cabinet (Tier 2 phone spot)
+**Laundry Room** *(Upstairs)*
+- Hamper, dryer, cabinet (search spots)
+- Hiding spot: burrow into clothes pile
 
-**Upstairs Hallway** *(dim, wood)*
-- Connects all upstairs rooms + stairwell
-- Archway to Junk Room
-
-**Junk Room** *(dark, wood)*
-- Dusty box (Tier 3 phone spot)
-- Old box, wooden crate (fakes)
-- Dust sheet (hiding spot)
-
-**Laundry Room** *(dim, tile)*
-- Washing machine (Tier 2 phone spot)
-- Laundry shelf, pile of clothes (fakes)
-- Clothes pile (hiding spot)
-
-### Doors
-
-| Door | Type | Special |
-|------|------|---------|
-| Storage | Panel, locked | Needs brass key |
-| Bathroom | Panel, lockable | Player can lock from inside |
-| Mom's Bedroom | Panel | **Always creaks** |
-| Kitchen | Archway | Always open |
-| Living Room | Archway | Always open |
-| Player Room | Panel | Starts open |
-| Living↔Player | Archway | Always open |
-| Study | Panel | — |
-| Guest Room | Panel | — |
-| Sewing Room | Panel | **Creaks** |
-| Junk Room | Archway | Always open |
-| Laundry Room | Panel | — |
+### Spot Summary
+| | Ground Floor | Upstairs | Total |
+|---|---|---|---|
+| Searchable containers | 38 | 15 | **53** |
+| Hiding spots | 7 | 4 | **11** |
+| Rooms | 7 | 6 | **13** |
 
 ---
 
@@ -337,64 +306,45 @@ x=0                x=7.5            x=15
 ## SECTION 7 — PHONE SPAWN SYSTEM
 ## ═══════════════════════════════
 
-The phone is hidden in a **different location every run** (randomized at game start).
+The phone is hidden in a **different location every run** (seeded randomly at game start).
 
 ### Spawn Location Tiers
 
-**TIER 1 — High Risk, High Anxiety** *(20% chance)*
-- Mom's pillow (she's lying on it)
+**TIER 1 — High Risk, High Anxiety** *(2 spots)*
+- Under Mom's pillow (she's lying on it)
 - Mom's nightstand drawer (inches from her head)
 
-**TIER 2 — Medium Risk** *(40% chance)*
+**TIER 2 — Medium Risk** *(7 spots)*
 - Mom's wardrobe
 - Kitchen fridge
 - Living room TV cabinet
-- Guest nightstand (upstairs)
-- Guest wardrobe (upstairs)
-- Sewing room fabric cabinet (upstairs)
-- Laundry washing machine (upstairs)
+- Study desk drawer
+- Guest bedroom nightstand
+- Sewing room cabinet
+- And more across both floors
 
-**TIER 3 — Lower Risk** *(40% chance)*
+**TIER 3 — Lower Risk** *(8 spots)*
 - Kitchen rice container
 - Living room bookshelf
+- Storage box
 - Bathroom cabinet
-- Storage box (requires key)
-- Study desk drawer (upstairs)
-- Study bookshelf (upstairs)
-- Sewing basket (upstairs)
-- Junk room dusty box (upstairs)
+- Upstairs locations (junk room, laundry, etc.)
 
-> **Important**: The phone can be on either floor. With ~40 searchable objects across 13 rooms,  
-> the player must explore the full house. Fake objects waste time, create noise, and build dread.
+**TIER 0 — Fake Targets** *(~22 spots)*
+- Look searchable but never contain the phone
+- Waste time, create noise, build dread
 
----
+> **Important**: The phone can spawn in the same room Mom currently occupies.
+> The game should never guarantee a safe retrieval.
 
-## ══════════════════════════════════════
-## SECTION 7.5 — GRANNY-STYLE ITEM LOOP
-## ══════════════════════════════════════
-
-Beyond the phone, three additional items are hidden each run (never overlapping):
-
-### Brass Key
-- Opens the **locked Storage Room** door
-- Never spawns inside Storage (or you could never reach it)
-- Hidden in a random search spot
-
-### Safe Code Note
-- A 4-digit code for the **safe** in the Storage Room
-- Also never spawns inside Storage
-- When found: "Read the note" → code stored in inventory HUD
-
-### Tranquilizer Gun
-- Locked inside the **safe** (in Storage Room)
-- Player must: find key → unlock Storage → find note → enter code → get gun
-- **CLICK to fire** — Mom is knocked out for **25 seconds** (state: `tranq`)
-- Range: 12 m, aim tolerance: ~7°
-- Comes with 1 dart loaded; a spare dart can be found elsewhere
-
-### Wrong Safe Code
-- Entering a wrong code makes the safe **buzz angrily** (noise intensity 0.45)
-- Mom can hear it — risky to guess
+### Additional Key Items
+| Item | Location | Purpose |
+|---|---|---|
+| Flashlight | Player's desk (always) | See in the dark; Mom can spot the beam |
+| Brass key | Random Tier 2–3 spot | Unlocks the Storage Room |
+| Safe code note | Random Tier 2–3 spot | 4-digit code for the lockbox |
+| Tranquilizer gun | Inside the safe | Knock Mom out for 25 s (click to fire) |
+| Spare dart | Random Tier 3 spot | One extra shot |
 
 ---
 
@@ -408,33 +358,32 @@ Press **E** near any highlighted object.
 
 | Action       | Description                                                |
 |--------------|------------------------------------------------------------|
-| Open/Close   | Doors (panel type only), drawers, cabinets                 |
-| Search       | Look through containers for the phone / items              |
-| Take         | Pick up phone, key, note, or dart from an opened container |
-| Hide         | Enter a hiding spot                                        |
-| Return       | Place phone back in its original location (Act 3)          |
-| Lock/Unlock  | Bathroom door (from inside), Storage door (with key)       |
-| Safe         | Enter the 4-digit code on the keypad                       |
+| Open/Close   | Doors, drawers, cabinets — animated open/close             |
+| Search       | Look through containers for the phone (physical animation) |
+| Hide         | Player enters a hiding spot                                |
+| Pick Up      | Grab the phone once found                                  |
+| Return       | Place phone back in its original location                  |
+| Hold Breath  | Available while hiding (see Stress System)                 |
+| Lock Door    | Bathroom door — press R while inside                       |
+| Keypad       | Enter 4-digit code on the safe                             |
 
-### Search Duration (Normal mode) & Noise by Object
+### Search Duration & Noise by Container Class (Normal difficulty)
 
-| Object           | Time  | Noise Intensity |
-|------------------|-------|-----------------|
-| Pillow           | 1.5s  | 0.08            |
-| Small drawer     | 1.5s  | 0.30            |
-| Large drawer     | 2.0s  | 0.38            |
-| Fridge           | 2.0s  | 0.22 (hum covers) |
-| Wardrobe         | 2.5s  | 0.50            |
-| Rice container   | 2.0s  | 0.40            |
-| Large box        | 3.0s  | 0.42            |
-| Cabinet          | 1.8s  | 0.32            |
+| Container Class | Time (s) | Noise Intensity | Notes               |
+|-----------------|----------|-----------------|----------------------|
+| Pillow          | 1.5      | 0.08            | Very quiet           |
+| Small drawer    | 1.5      | 0.30            | Standard             |
+| Large drawer    | 2.0      | 0.38            | Louder               |
+| Fridge          | 2.0      | 0.22            | Hum covers some noise|
+| Wardrobe        | 2.5      | 0.50            | Medium-High          |
+| Rice container  | 2.0      | 0.40            | Rustling             |
+| Large box       | 3.0      | 0.42            | Slow                 |
+| Cabinet         | 1.8      | 0.32            | Standard             |
 
-Duration multipliers: Easy ×0.5, Normal ×1.0, Hard ×1.6.
+Difficulty multiplier: Easy ×0.5, Normal ×1.0, Hard ×1.6
 
-> **Note**: Searching is an animation + sound event. Mom's AI processes this sound **before** the search ends, meaning she can start moving toward the player **before** they've finished searching.
-
-### Physical Container Animation
-Containers open physically — drawers slide out, doors swing, lids lift. The opened state is visible; items inside are visible after opening.
+> **Note**: Searching triggers a physical animation (drawers slide out, doors swing open).
+> Mom's AI processes the noise **before** the search ends — she can start moving toward the player before they've finished searching.
 
 ---
 
@@ -445,24 +394,24 @@ Containers open physically — drawers slide out, doors swing, lids lift. The op
 Mom has **9 behavioral states** that transition based on stimuli.
 
 ```
-[SLEEP] ←──────────────────────────────────┐
-   ↓ (noise / random stir)                 │
-[PATROL] ──→ (noise heard) ──→ [INVESTIGATE]│
-   ↑ (patrol again 55%)              ↓      │
-   │                        (player spotted) │
-   │                              ↓          │
-   │                          [CHASE]        │
-   │                              ↓          │
-   │                   (player escaped)      │
-   │                              ↓          │
-   │                          [SEARCH]       │
-   │                              ↓          │
-   │                (search timeout)─────────┤
-   │                          [RETURN]───────┤
-   │                                         │
-   │        [TRANQ] (shot by dart)───────────┘
-   │                                         │
-   └─── [FAKE SLEEP] (20%/35% on return)────┘
+[SLEEP] ←──────────────────────────────────────┐
+   ↓ (noise / random stir)                     │
+[FAKE SLEEP] ──→ (player moves) ──→ [PATROL]   │
+   ↓ (timeout)                          ↓      │
+   └──→ [SLEEP]      (noise heard) ──→ [INVESTIGATE]
+                                           ↓
+                                  (player spotted)
+                                           ↓
+                                       [CHASE]
+                                           ↓
+                                  (player escaped)
+                                           ↓
+                                       [SEARCH]
+                                           ↓
+                                 (search timeout)──→ [RETURN] ──→ [SLEEP]
+
+[TRANQUILIZED] ← (hit by dart, 25 s knockout)
+[FINALE] ← (phone buzzes in Act 3)
 ```
 
 ### State Definitions
@@ -470,77 +419,76 @@ Mom has **9 behavioral states** that transition based on stimuli.
 **SLEEP**
 - Mom is in bed, producing soft snoring
 - Can be woken by:
-  - Any noise above wake threshold (0.38 intensity after attenuation)
-  - Random light-sleep stir (every 14–32 seconds)
-  - 65% chance a stir becomes a full patrol
-  - First guaranteed patrol after ~16 seconds
-  - Phone vibration (Act 2): 100% guaranteed wake
-- **FAKE SLEEP**: 20% normal / 35% hard — she lies down, goes silent, waits up to 30 s
+  - Any noise above threshold 0.38 reaching her position (attenuated by walls)
+  - Random light-sleep stir (every 14–32 s, 65% chance to become patrol)
+  - First guaranteed patrol after 16 s
+  - Phone vibration (Act 2) — 100% wake
+- 55% chance to keep roaming instead of going back to bed
+
+**FAKE SLEEP** *(20% normal / 35% hard)*
+- Mom lies down, snoring stops
+- Completely motionless for up to 30 seconds
+- If the player moves: she rises silently → PATROL
+- If timeout: real SLEEP
 
 **PATROL**
-- Mom walks a semi-random route through **both floors** (uses staircase)
-- Carries broom → *tap...tap...tap...* (reveals her exact position)
-- Patrol speed: 1.54 m/s (70% of player walk)
-- She may stop and stand still in doorways (35% chance, 5–10 seconds)
-- 55% chance she keeps roaming instead of returning to bed
-- Her broom tap **always reveals her location** — until it stops
+- Semi-random route through **both floors** (she uses the stairs)
+- Carries broom → *tap...tap...tap...* (distinct rhythm)
+- Speed: 1.54 m/s (70% of player walk)
+- May stop in doorways for 5–10 s (35% chance) — extremely unnerving
+- Broom tap **always reveals her location** — until it stops
 
 **INVESTIGATE**
-- Triggered: mom hears a noise above threshold
-- She walks directly to the noise source at 1.98 m/s
+- Triggered: Mom hears a noise above her threshold
+- Walks directly to the noise source at 1.98 m/s (90% of player walk)
 - Examines the area: 10–20 seconds
 - If she finds nothing: returns to patrol
-- Audio during investigate: no broom taps. She moves silently.
+- If she spots the player: → CHASE
+- Audio: no broom taps. She moves silently.
 
 **SEARCH**
 - Triggered: player lost during chase, or suspicious evidence found
 - Checks hiding spots methodically
 - Duration: 20–40 seconds
-- **She calls out softly** during this phase
-- If she finds the player: **CHASE**
+- If she finds the player: → CHASE
+- If timer expires: → RETURN
 
 **CHASE**
-- Triggered: direct line of sight for 0.5 seconds (detection meter fills at 20/sec)
-- Mom moves at 3.52 m/s (160% of player walk, slower than sprint)
-- She does NOT give up for 15 seconds after losing sight
-- She **anticipates doorways**
+- Triggered: direct line of sight to player for 0.5 seconds
+- Speed: 3.52 m/s (160% of player walk — faster than walk, slower than sprint)
+- Does NOT give up for 15 seconds after losing sight
+- Anticipates doorways — doesn't always follow the exact path player took
 - Player stress → 100 instantly
-- Mom speaks: *"I knew it!"* / *"Where do you think you're going?"*
+- Catch distance: 0.95 m → Game Over (jumpscare)
 
 **RETURN**
-- Mom walks back to bedroom at 1.43 m/s
+- Mom walks back to bedroom at 1.43 m/s (65% of player walk)
 - Broom taps resume
 - Entering bedroom triggers potential FAKE SLEEP
 
-**TRANQ** *(Granny-style)*
-- Triggered: player shoots Mom with the tranquilizer gun
-- Mom collapses and is out for **25 seconds**
-- She then wakes and enters PATROL (angry)
+**TRANQUILIZED**
+- Hit by tranquilizer dart
+- Collapses for 25 seconds
+- Completely unresponsive
+- After waking: → PATROL (angry)
 
 **FINALE**
-- Scripted Act 3 behavior: Mom exits bedroom after 4 seconds
-- Walks to where the phone was hidden
-- Checks for the phone; triggers SEARCH if it's missing
+- Triggered by phone vibration in Act 3
+- Mom exits bedroom after 4 seconds
+- Walks directly to the room where phone originally was
+- If phone is there → picks it up, returns to sleep (success path)
+- If phone is missing → SEARCH
+
+### Mom's Memory System *(Hard Mode)*
+Mom **remembers** where noises came from:
+- Checks rooms where she previously heard sounds more frequently
+- If the player hid in the same spot twice, she may check it first on SEARCH
 
 ### Mom's Hearing
-
-```
-Effective noise = base_intensity × (wall_attenuation ^ wall_count)
-Wall attenuation = 0.45 per wall crossed
-Hearing range = 9 m (base)
-Wake threshold = 0.38 (attenuated intensity reaching her)
-```
-
-### Mom's Vision
-- 60° forward arc
-- Range depends on light: 2.4 m (dark), 4.5 m (dim), 8.5 m (lit)
-- Detection meter fills at 20/sec + 5 if running + 3 if flashlight on
-- Standing still in dim light: 30% detection rate
-- At 100 detection: CHASE triggered
-
-### Mom's Memory *(Hard Mode)*
-- Remembers where noises came from
-- Checks frequently-heard areas more often on subsequent patrols
+- Base hearing range: 9 m
+- Scaled by noise intensity and wall count
+- Wall attenuation: ×0.38 per wall between source and Mom
+- Hearing sensitivity multiplier varies by state
 
 ---
 
@@ -548,35 +496,45 @@ Wake threshold = 0.38 (attenuated intensity reaching her)
 ## SECTION 10 — AUDIO DESIGN
 ## ══════════════════════
 
-> **This is the most important system in the game.**  
+> **This is the most important system in the game.**
 > Audio design is not decoration. It IS the gameplay.
 
-### Positional Audio
-- All sounds use 3D positioning (Three.js positional audio)
-- Volume = distance (closer = louder)
-- Reverb/lowpass filter increases based on wall count between player and source
-- Player should be able to close their eyes and know roughly where Mom is — until the sound stops
+### Ambient Soundscape (Always Present)
+
+| Sound           | Location       | Purpose                         |
+|-----------------|----------------|---------------------------------|
+| Clock ticking   | Living room    | Rhythmic grounding              |
+| Fridge hum      | Kitchen        | Masks medium sounds in kitchen  |
+| Fan whirring    | Hallway        | White noise                     |
+| Crickets        | Exterior       | Night atmosphere                |
+| Dripping sink   | Bathroom       | Unsettling rhythm               |
 
 ### Mom's Audio Profile
 
-| State       | Sound                               | What Player Learns       |
-|-------------|-------------------------------------|--------------------------|
-| Sleep       | Soft snoring (rhythmic)             | She's in her room        |
-| Patrol      | *Tap...tap...tap...* (broom)        | Her exact position       |
-| Investigate | Footsteps only (no broom)           | She heard something      |
-| Search      | Slow footsteps + soft murmuring     | She's hunting            |
-| Chase       | Rapid footsteps + voice line        | RUN                      |
-| Fake Sleep  | **Absolute silence**                | Maximum uncertainty      |
-| Tranq       | Thud (collapse)                     | She's down — GO          |
+| State         | Sound                               | What Player Learns       |
+|---------------|-------------------------------------|--------------------------| 
+| Sleep         | Soft snoring (rhythmic)             | She's in her room        |
+| Patrol        | *Tap...tap...tap...* (broom)        | Her exact position       |
+| Investigate   | Footsteps only (no broom)           | She heard something      |
+| Search        | Slow footsteps + soft murmuring     | She's hunting            |
+| Chase         | Rapid footsteps + voice line        | RUN                      |
+| Fake Sleep    | **Absolute silence**                | Maximum uncertainty      |
+| Tranquilized  | Nothing                             | She's down (for now)     |
 
 ### The Silence Mechanic
-When all Mom-related audio stops, it can mean:
-1. She's standing completely still, listening
+When all Mom-related audio stops:
+- No snoring, no broom taps, no footsteps, no voice
+
+This can mean:
+1. She's standing still, listening
 2. She's directly behind a door the player is about to open
 3. She fell back into real sleep
 4. She's in the same room, waiting
+5. She's faking sleep
 
 The player has **no way to know which one** without moving — and moving makes noise.
+
+> This moment should feel worse than the chase.
 
 ---
 
@@ -584,55 +542,103 @@ The player has **no way to know which one** without moving — and moving makes 
 ## SECTION 11 — HIDING SYSTEM
 ## ══════════════════════════
 
-### Available Hiding Spots
+### Available Hiding Spots (11 total)
 
-| Spot                    | Room            | Floor | Safety  | Notes                                |
-|-------------------------|-----------------|-------|---------|--------------------------------------|
-| Get in bed              | Player Bedroom  | 1F    | 0.95    | Counts as "in bed" for endings       |
-| Under your bed          | Player Bedroom  | 1F    | 0.90    | —                                    |
-| Inside wardrobe         | Player Bedroom  | 1F    | 0.70    | —                                    |
-| Behind the sofa         | Living Room     | 1F    | 0.50    | Only safe if Mom doesn't enter fully |
-| Behind the curtains     | Living Room     | 1F    | 0.35    | Shadow visible if flashlight used    |
-| Inside the big box      | Storage         | 1F    | 0.75    | Hard to reach (room is locked)       |
-| Behind shower curtain   | Bathroom        | 1F    | 0.70    | —                                    |
-| Under Mom's bed         | Mom's Bedroom   | 1F    | 0.85    | **Extreme risk** — for secret ending |
-| Under the guest bed     | Guest Bedroom   | 2F    | 0.80    | —                                    |
-| In the guest wardrobe   | Guest Bedroom   | 2F    | 0.65    | —                                    |
-| Under the dust sheet    | Junk Room       | 2F    | 0.60    | —                                    |
-| In the clothes pile     | Laundry Room    | 2F    | 0.70    | —                                    |
-
-Safety rating (0 = mom checks first, 1 = mom checks last during SEARCH).
+| Spot                     | Room            | Floor | Safety | Notes                                      |
+|--------------------------|-----------------|-------|--------|---------------------------------------------|
+| Get in bed               | Player Bedroom  | 1F    | 0.95   | Counts as "in bed" for endings; no under-bed option |
+| Inside wardrobe          | Player Bedroom  | 1F    | 0.70   | Visible on SEARCH                           |
+| Behind sofa              | Living Room     | 1F    | 0.50   | Only works if Mom doesn't enter fully       |
+| Behind curtains          | Living Room     | 1F    | 0.35   | Shadow visible; lowest safety               |
+| Inside big box           | Storage Room    | 1F    | 0.75   | Hard to reach under pressure                |
+| Behind shower curtain    | Bathroom        | 1F    | 0.70   | Lockable door buys 10 s                     |
+| Under Mom's bed          | Mom's Bedroom   | 1F    | 0.85   | Extreme risk — used for secret ending       |
+| Under guest bed          | Guest Bedroom   | 2F    | 0.80   | Upstairs safe haven                         |
+| In guest wardrobe        | Guest Bedroom   | 2F    | 0.65   | —                                           |
+| Under dust sheet         | Junk Room       | 2F    | 0.60   | —                                           |
+| In clothes pile          | Laundry Room    | 2F    | 0.70   | —                                           |
 
 ### While Hiding
 - Player becomes invisible to Mom's sight-based detection
-- But NOT immune to noise-based detection or SEARCH state checks
-- Press Q to listen (peek): tiny noise (0.08 intensity) but gives partial audio info
+- But NOT immune to:
+  - Making noise (heavy breathing if stress is maxed)
+  - Being found during SEARCH state (Mom checks each spot)
+  - Moving too soon
+- Press **Q** to listen (hear ambient cues for Mom's position)
+- Press **E** again to exit
 
 ---
 
-## ══════════════════════════
-## SECTION 12 — FLASHLIGHT
-## ══════════════════════════
+## ═══════════════════════════
+## SECTION 12 — DETECTION SYSTEM
+## ═══════════════════════════
 
-Found on the desk in the Player Bedroom.
+Mom detects the player via two channels: **Sound** and **Sight**.
 
-- **Uses**: Illuminate dark rooms (Storage, Study, Sewing Room, Junk Room)
-- **Risk**: Flashlight beam increases detection (+3/sec) while in Mom's LOS
-- **Toggle**: Press F to turn on/off
-- **Battery**: Unlimited
+### Sound Detection
+
+| Action               | Noise Intensity |
+|----------------------|-----------------|
+| Crouch walk (carpet) | 0.05            |
+| Crouch walk (tile)   | 0.12            |
+| Crouch walk (wood)   | 0.15            |
+| Walk (carpet)        | 0.20            |
+| Walk (tile/wood)     | 0.40–0.45       |
+| Sprint (any surface) | 0.80            |
+| Open drawer          | 0.30            |
+| Open wardrobe        | 0.50            |
+| Stumble (0 stamina)  | 0.70            |
+| Door creak (Mom's)   | 0.45            |
+| Peek (from hiding)   | 0.08            |
+| Phone buzz (Act 2)   | **1.00**        |
+
+### Sight Detection
+- Mom has a **60° forward vision cone**
+- Vision cone range depends on light level:
+  - Dark room: 2.4 m
+  - Dim room: 4.5 m
+  - Lit room: 8.5 m
+- Player standing still in dim light: 30% detection rate
+- Player moving in any light: full detection
+
+### Detection Meter
+Internal value 0–100. Decays at 14/sec when not in view.
+
+| Source               | Fill Rate          |
+|----------------------|--------------------|
+| In Mom's sight cone  | 20/sec             |
+| Player sprinting     | +5 bonus           |
+| Using flashlight     | +3 bonus           |
+| **At 100**           | → CHASE triggered  |
+
+---
+
+## ═════════════════════════
+## SECTION 13 — FLASHLIGHT
+## ═════════════════════════
+
+Found on the player's desk at game start.
+
+- **Uses**: Illuminate dark rooms (Storage, Study, parts of hallway)
+- **Risk**: Flashlight beam is visible to Mom (+3 detection bonus while in her LOS)
+- **Toggle**: Press **F** to turn on/off instantly
+- **Battery**: Unlimited (this is not a survival game — the flashlight is a tool, not a resource)
 
 > The flashlight forces a tradeoff — see better, but risk being seen.
+> In Storage Room (dark), it's almost necessary. Near Mom's room, it's suicidal.
 
 ---
 
-## ═════════════════════════
-## SECTION 13 — THE REPLY PHASE (ACT 2)
-## ═════════════════════════
+## ══════════════════════════
+## SECTION 14 — THE REPLY PHASE (ACT 2)
+## ══════════════════════════
 
 When the phone is found:
 
 1. Player picks up phone
-2. Messages load:
+2. Screen dims slightly — phone screen glow appears
+3. Messages load:
+
 ```
 bestie (today)
 ─────────────────────────
@@ -646,98 +652,128 @@ bestie (today)
 12:38 AM  whatever
 ```
 
-3. **5-second countdown** begins
-4. Reply options or chicken out (close without sending)
-5. If reply sent → phone vibrates at maximum intensity (1.0)
+4. **5-second countdown** begins to select a reply
+5. Reply options:
+   - [1] "Sorry, mom took my phone"
+   - [2] "I'm here, what's wrong?"
+   - [3] "still here sorry"
+   - [4] *[Say nothing — just close app]*
+
+6. Option 4 lets the player chicken out — no reply, game continues without triggering Act 3. Victory message reads differently.
+7. If any other option is selected → message sends → **phone vibrates at maximum intensity (1.0)**
 
 ---
 
 ## ════════════════════════
-## SECTION 14 — THE FINAL PHASE (ACT 3)
+## SECTION 15 — THE FINAL PHASE (ACT 3)
 ## ════════════════════════
 
 ### Trigger: Phone vibrates
 
-Immediately:
-- Mom wakes. **100% guaranteed. No exceptions.**
-- Player stress → 100
-- A 10-second countdown: **"PUT IT BACK. GET TO BED."**
-- Music hits full intensity
+Immediately on vibration:
+- Mom wakes. **100% guaranteed.**
+- Player stress → 100 instantly
+- Screen flashes
+- A 10-second countdown appears: **"PUT IT BACK. GET TO BED."**
 
 ### What the player must do in 10 seconds:
 1. **Return the phone** to its original hiding spot
-2. **Get back to their bedroom** (possibly from another floor!)
+2. **Get back to their bedroom**
 3. **Get in bed**
 
-### Mom's finale behavior:
-- Exits bedroom after 4 seconds
-- Walks directly to the room where phone was hidden
-- If phone is there → she picks it up, returns to sleep *(success path)*
-- If phone is missing → SEARCH begins *(worst case)*
+### Mom's behavior in Final Phase:
+- Exits bedroom after 4 seconds (player has a 4-second window)
+- Walks directly to the room where phone originally was
+- If phone is there → picks it up, mutters, returns to sleep *(success path)*
+- If phone is missing → SEARCH
+
+### The Tension Mechanic:
+The phone must be placed **before** Mom reaches that room.
+The player must be in bed **before** Mom checks the bedroom.
+These two tasks often require choosing which to prioritize.
 
 ---
 
 ## ═══════════════════════
-## SECTION 15 — ENDINGS
+## SECTION 16 — ENDINGS
 ## ═══════════════════════
 
 ### ENDING 1 — "Good Night" *(Best Ending)*
 Requirements: Phone returned, player in bed, Mom fooled, reply sent
 
+```
+MESSAGE DELIVERED ✓
+Bestie: "omg finally. i knew you weren't ignoring me 💙"
+
+"Good night."
+```
+
 ### ENDING 2 — "Coward" *(Neutral Ending)*
 Requirements: Phone returned, player in bed, reply NOT sent
 
+```
+Phone returned. Mom asleep.
+Mission accomplished.
+...But you never replied.
+"Maybe tomorrow."
+```
+
 ### ENDING 3 — "Caught" *(Standard Failure)*
-Mom catches player → jumpscare sequence (3 s face + 5.5 s scream in darkness)
+Mom catches player (catch distance ≤ 0.95 m).
+
+```
+[Jumpscare: Mom's face on black screen for 3 s, then scream for 5.5 s]
+Mom's voice: "We'll talk in the morning."
+CAUGHT
+[Retry? / Quit]
+```
 
 ### ENDING 4 — "The Waiting Kind" *(Secret Ending)*
-Requirements: Player hides under **Mom's bed** during Final Phase and waits for her to go back to sleep (~18 seconds). Then crawls out.
+Requirements: Player hides under **Mom's bed** during Final Phase and waits 18 seconds for her to go back to sleep.
+
+```
+[Mom enters room. Checks nightstand. Finds phone.]
+[She sits on the edge of the bed.]
+[The mattress sags above you.]
+[She sighs.]
+[She lies down.]
+[Silence.]
+
+[Player must crawl out slowly without waking her.]
+
+"That was the longest five minutes of your life."
+```
 
 ---
 
 ## ═══════════════════════════
-## SECTION 16 — DIFFICULTY MODES
+## SECTION 17 — DIFFICULTY MODES
 ## ═══════════════════════════
 
 ### EASY MODE — "Practice Run"
-- Mom doesn't wake (house exploration mode)
-- **Dual floor map always visible** (both floors side by side)
-- No stress effects, no chase
-- Search durations: ×0.5
+- Mom wakes but with reduced aggression (explore mode)
+- Dual floor map always visible on screen
+- No stress effects
+- Shorter search times (×0.5)
+- Purpose: Learn the house before committing to a real run
 
 ### NORMAL MODE — "Don't Wake Mom"
 - Full gameplay
-- **Dual floor map** toggle: M / Tab (both floors visible simultaneously)
-- Status notifications + Mom dot on map
-- Search durations: ×1.0
+- Dual floor map visible (toggle with M/Tab)
+- Mom dot on map (color-coded by state)
+- Status notifications: "MOM IS AWAKE" / "MOM IS APPROACHING" / "MOM IS SEARCHING"
+- Standard search times
 
 ### HARD MODE — "She Already Knows"
-- **No map, no notifications, no HUD hints**
-- Mom's patrol routes longer and less predictable
-- Fake sleep frequency: 35% (vs 20%)
+- No map
+- No notifications
+- No icons / HUD hints
+- Mom's patrol routes are longer and less predictable
 - Mom memory system active
-- Search durations: ×1.6
-- The only information: audio cues + spatial memory
-
----
-
-## ════════════════════════════════
-## SECTION 17 — MAP SYSTEM
-## ════════════════════════════════
-
-The map displays **both floors simultaneously** (no toggle between floors):
-- **Left panel**: Floor 2 (Upstairs) — labeled "▲ TẦNG 2"
-- **Right panel**: Floor 1 (Ground) — labeled "▼ TẦNG 1"
-
-Each panel shows:
-- Room outlines with labels
-- Staircase indicator (↑STAIRS / ↓STAIRS)
-- **Player dot** (blue) with direction line — bright on current floor, faded on other
-- **Mom dot** (red if awake, muted if asleep) — same brightness rules
-
-Controls:
-- **M / Tab**: toggle map (Normal mode)
-- Always visible on Easy; hidden on Hard
+- Fake sleep frequency: 35% (vs 20% normal)
+- Search times ×1.6
+- The only info the player has: their own memory + audio cues + spatial reasoning
+- **This is the intended experience for replay**
 
 ---
 
@@ -746,84 +782,115 @@ Controls:
 ## ════════════════════════════════
 
 ### Engine & Stack
-- **Three.js** via React Three Fiber (R3F)
-- **Rapier** physics (via @react-three/rapier)
-- **React 19** + **TypeScript 6** + **Vite 8**
-- **Zustand** for state management
-- Deployed to **GitHub Pages** (gh-pages branch)
+- **React 19** + **TypeScript 6**
+- **Three.js** via **React Three Fiber**
+- **Rapier** physics via `@react-three/rapier`
+- **Zustand** state management
+- **Vite** build tool
+- Deployed to **GitHub Pages** (branch `gh-pages`)
 
-### Architecture
-
+### Project Structure
 ```
 src/
+├── App.tsx                         # Root — Canvas + HUD wrapper
+├── main.tsx                        # Entry point
+├── constants.ts                    # ALL tuning values (GDD numbers live here)
 ├── components/
+│   ├── Experience.tsx              # Scene composition (lights, physics, house, mom, player)
+│   ├── PlayerController.tsx        # First-person controller (movement, stamina, crouch)
+│   ├── PlayerCamera.tsx            # Mouse look (pointer lock)
+│   ├── PostFX.tsx                  # Post-processing (vignette, blur, stress effects)
 │   ├── canvas/
-│   │   ├── House.tsx          # Walls, floors, ceiling, doors, furniture, colliders
-│   │   ├── Mom.tsx            # Mom mesh + AI tick integration
-│   │   └── Containers.tsx     # Physical container open/close animations
-│   ├── ui/
-│   │   ├── HUD.tsx            # Objective, prompt, map, keypad, inventory, stress overlay
-│   │   └── Overlays.tsx       # Menu, intro, phone UI, caught screen, ending screen
-│   ├── Experience.tsx         # Scene composition, lighting, post-processing
-│   ├── PlayerCamera.tsx       # First-person camera rig
-│   └── PlayerController.tsx   # Movement, stamina, interactions, hiding, shooting
+│   │   ├── House.tsx               # Procedural house geometry (walls, floors, doors, furniture)
+│   │   ├── Mom.tsx                 # Mom mesh + animation
+│   │   └── Containers.tsx          # Physical container search (drawers slide, doors swing)
+│   └── ui/
+│       ├── HUD.tsx                 # Map, objective, notifications, keypad, safe code
+│       └── Overlays.tsx            # Title screen, phone UI, endings, jumpscare
 ├── game/
-│   ├── house.ts               # Room, wall, door definitions + nav graph + pathfinding
-│   ├── momAI.ts               # Full AI state machine (9 states)
-│   ├── spots.ts               # Search spots, hide spots, phone spawn, item spawn
-│   ├── interactions.ts        # What can the player interact with right now?
-│   ├── furnitureData.ts       # Every furniture piece as primitive boxes/cylinders
-│   └── runtime.ts             # Per-frame mutable state (positions, door states, noise bus)
+│   ├── house.ts                    # Room definitions, floor types, wall segments, staircase
+│   ├── momAI.ts                    # 9-state AI state machine
+│   ├── spots.ts                    # 53 search spots + 11 hide spots (positions, tiers, classes)
+│   ├── interactions.ts             # Player↔object interaction logic
+│   ├── furnitureData.ts            # Furniture geometry (procedural meshes, sizes, textures)
+│   └── runtime.ts                  # Tick-level game state (positions, timers, noise events)
 ├── state/
-│   └── gameStore.ts           # Zustand store: phase, acts, stress, inventory, endings
+│   └── gameStore.ts                # Zustand store (persistent game state, UI flags)
 ├── systems/
-│   ├── audio.ts               # Positional audio engine, spatial sound
-│   ├── playerLook.ts          # Mouse look (yaw/pitch)
-│   ├── useDirector.ts         # Act progression, finale trigger, ending conditions
-│   └── useInput.ts            # Keyboard input binding
-├── utils/
-│   └── proceduralTextures.ts  # Canvas-generated textures (wood, carpet, tile, wall)
-├── constants.ts               # All tuning values in one place
-├── App.tsx
-└── main.tsx
+│   ├── audio.ts                    # Positional audio engine (Web Audio API)
+│   ├── playerLook.ts               # Mouse look state
+│   ├── useDirector.ts              # Game director (act progression, pacing)
+│   └── useInput.ts                 # Input bindings (keyboard + mouse)
+└── utils/
+    └── proceduralTextures.ts       # Canvas-based texture generation (wood, carpet, tile, wall)
 ```
 
-### Navigation System
-- **Dijkstra pathfinding** on a hand-placed nav graph (nodes + edges)
-- Covers both floors + staircase nodes
-- Mom uses this for all movement (patrol, investigate, chase, return)
-- `nearestNode()` snaps world positions to graph; height-aware to prevent cross-floor snapping
+### Key Architectural Decisions
+- **100% procedural assets** — no external models, textures, or audio samples
+- **Procedural textures** generated on canvas at startup (wood grain, carpet, tile patterns, ceiling, wall)
+- **Granny-style visual upgrade**: baseboards, door frames, crown molding, wainscoting — all geometry in `House.tsx`
+- **Physical containers**: `Containers.tsx` renders animated drawer/door meshes; furniture data tags which parts to hide when a container is open (`hideForSpot`)
+- **All tuning numbers** in `constants.ts` with GDD section references in comments
+- **Noise event bus** via `runtime.ts` — emitNoise() fires events that Mom AI subscribes to
 
-### Key Design Decisions
-- **100% procedural assets**: no external models, textures, or audio files
-- **No downloads**: everything generated at runtime via canvas textures + procedural geometry
-- **Rapier physics**: real capsule colliders for player + Mom, cuboid colliders for walls/furniture
-- **Wall attenuation**: noise intensity drops by 0.45× per wall crossed — encourages spatial reasoning
+### Map Implementation
+- Both floors rendered as side-by-side canvases in `HUD.tsx`
+- Player position dot + direction triangle
+- Mom dot color-coded by AI state
+- Room labels, door indicators, stair markers (↑STAIRS / ↓STAIRS)
+- No toggle/switch — both maps always visible simultaneously
+
+---
+
+## ════════════════════════════
+## SECTION 19 — VISUAL STYLE
+## ════════════════════════════
+
+### Art Style
+- First-person 3D (not top-down, not pixel art)
+- Procedurally generated textures — no external assets
+- Dark interior, realistic proportions
+- Light sources: player flashlight, fridge glow, phone screen
+- Granny-style house details (baseboards, crown molding, wainscoting, door frames)
+
+### Procedural Textures
+| Surface | Style |
+|---|---|
+| Wood floor | Warm brown grain pattern |
+| Carpet | Soft fabric texture |
+| Tile | Kitchen/bathroom ceramic pattern |
+| Walls | Painted drywall |
+| Ceiling | White textured |
+
+### UI Style
+- Minimal HUD — no health bars, no visible stress number
+- Stress effects are visual/audio only (vignette, heartbeat, blur)
+- Context prompts appear near objects (floating text)
+- Phone UI uses realistic chat interface aesthetic
+- Dual floor map: simple floor-plan style with colored dots
 
 ---
 
 ## ══════════════════════════
-## SECTION 19 — CONTROLS REFERENCE
+## SECTION 20 — FEEL & POLISH TARGETS
 ## ══════════════════════════
 
-| Key | Action |
-| --- | --- |
-| WASD / mouse | Move / look |
-| CTRL or C | Crouch (quiet movement) |
-| SHIFT | Sprint (loud, drains stamina) |
-| E | Interact: search, doors, hide, pick up, return phone |
-| F | Flashlight toggle |
-| B | Hold breath (−20 stress, 15 s cooldown) |
-| Q | Listen (peek) while hiding |
-| R | Lock bathroom door (from inside) |
-| M / Tab | Toggle floor map (Normal mode) |
-| Click | Fire tranquilizer gun (when equipped) |
-| 0–9 | Type safe code (when keypad open) |
-| ESC | Pause / close keypad |
+The game should feel **good** in these moments:
+
+- **Crouching past a doorway** as Mom's broom taps echo from the next room
+- **Holding your breath** at 98 stress, listening to broom taps get quieter
+- **Opening the fridge slowly** and finding the phone — that one moment of relief
+- **Sprinting back to your room** with 4 seconds left, knowing you're cutting it close
+- **Lying in bed** as Mom opens your door, looks in, and leaves
+- **Silence** after the chase ends — is she gone? Or waiting?
+- **The staircase** — hearing Mom's footsteps above you, or below you, and not knowing which way she's going
+
+The game is finished when a player says:
+
+> *"My heart was literally pounding."*
 
 ---
 
-*Document version: 2.1*  
-*Game: Don't Wake Mom 3D*  
-*Engine: Three.js (React Three Fiber) | Genre: Stealth Horror-Comedy | Platform: Web*  
-*Version: 1.4.0 — Two-story house, Granny-style item loop, dual floor map*
+*Document version: 2.1*
+*Game: Don't Wake Mom 3D*
+*Engine: React Three Fiber + Rapier | Genre: Stealth Horror-Comedy | Platform: Browser (GitHub Pages)*
